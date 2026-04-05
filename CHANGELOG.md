@@ -121,11 +121,34 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.2.0] — 2026-04-05
+
+### Breaking / Kiến trúc
+
+- **Thay Supabase bằng MongoDB + API riêng + Clerk**: Ứng dụng không kết nối trực tiếp MongoDB; dùng REST API trong thư mục `server/` (Node.js, driver MongoDB, xác thực JWT Clerk).
+- **Đăng nhập**: [Clerk](https://clerk.com) với SDK `clerk_flutter` — màn hình đăng nhập/đăng ký do Clerk cung cấp (`ClerkAuthentication`).
+- **Biến môi trường app**: `CLERK_PUBLISHABLE_KEY`, `API_BASE_URL` (thay `SUPABASE_*`).
+- **Schema SQL cũ** (`supabase/supabase.sql`) đánh dấu deprecated; giữ để tham chiếu hoặc migrate thủ công.
+
+---
+
+## [b0.3.0] — 2026-04-05
+
+### Tổng quan (big update)
+
+- **Phiên bản ứng dụng:** `1.0.8+9` (Android `versionName` `1.0.8`, `versionCode` `9`).
+- **API Node (`server/`):** nén phản hồi gzip (`compression`), tắt header `X-Powered-By`, `trust proxy` phù hợp reverse proxy (Render); giữ CORS + JSON body.
+- **Flutter `BackendApiService`:** timeout HTTP **45s** (phù hợp cold start Render free + Atlas); gom decode JSON list; giữ nguyên hợp đồng REST.
+- **Deploy Render:** `render.yaml` (Blueprint) ở root repo — Docker context `server/`, health check `/health`, secrets `MONGODB_URI` / `CLERK_SECRET_KEY`; `server/README.md` hướng dẫn Web Service thủ công + Blueprint.
+- **Tài liệu:** `README.md` bảng phiên bản; `GITHUB_RELEASE.md` khớp b0.3.0; `.env.example` nhất quán.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.
 - [ ] Thông báo nhắc nhở khi thực phẩm sắp hết hạn.
 - [ ] Danh sách mua sắm tự động từ kho thiếu.
-- [x] Đồng bộ dữ liệu qua Supabase. ✓ Hoàn thành ở v1.2.0
+- [x] Đồng bộ dữ liệu qua backend (trước đây Supabase; nay MongoDB + API). ✓
 - [ ] Ảnh thực phẩm tùy chỉnh từ camera.
 - [ ] Widget màn hình chính (Android home screen widget) hiển thị cảnh báo.

@@ -1,24 +1,17 @@
 import 'dart:async';
+import 'package:clerk_auth/clerk_auth.dart' as clerk;
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/food_item.dart';
 import '../models/recipe.dart';
 import '../models/user.dart';
 import '../constants/translations.dart';
-import '../services/supabase_service.dart';
+import '../services/backend_api_service.dart';
 
 const _uuid = Uuid();
-
-// Credentials for the built-in demo account.
-// Create this user once in the Supabase dashboard → Authentication → Users.
-const _kTestEmail = 'test@harvestandhearth.app';
-const _kTestPassword = 'testPassword123!';
-
-/// Custom URL scheme registered in AndroidManifest.xml for OAuth callbacks.
-const _kOAuthRedirect = 'io.supabase.harvestandhearth://login-callback/';
 
 class AppProvider extends ChangeNotifier {
   // ── State ──────────────────────────────────────────────────────────────────
@@ -29,13 +22,13 @@ class AppProvider extends ChangeNotifier {
   String _language = 'VIE';
   bool _isDark = false;
   bool _isInitialized = false;
-  bool _hasSession = false;
-  StreamSubscription<AuthState>? _authSub;
+  bool _isLoadingUser = false;
+  String? _boundUserId;
 
   // ── Getters ────────────────────────────────────────────────────────────────
   AppUser? get user => _user;
-  /// True khi có session Supabase nhưng _user chưa load xong (dùng để giữ splash).
-  bool get isLoadingUser => _hasSession && _user == null;
+  /// True while loading profile/inventory after Clerk sign-in.
+  bool get isLoadingUser => _isLoadingUser;
   List<FoodItem> get inventory => List.unmodifiable(_inventory);
   List<Recipe> get savedRecipes => List.unmodifiable(_savedRecipes);
   List<Recipe> get recipeCache => List.unmodifiable(_recipeCache);
@@ -47,70 +40,91 @@ class AppProvider extends ChangeNotifier {
 
   // ── Init ───────────────────────────────────────────────────────────────────
   Future<void> init() async {
-    // Restore UI preferences from local cache first (instant, no network)
     final prefs = await SharedPreferences.getInstance();
     _language = prefs.getString('language') ?? 'VIE';
     _isDark = prefs.getBool('isDark') ?? false;
-
-    // Kiểm tra session từ local cache (không tốn network)
-    final supaUser = SupabaseService.instance.currentUser;
-    _hasSession = supaUser != null;
-
-    // Hiện ngay màn hình login hoặc giữ splash (isLoadingUser) — không chờ DB
     _isInitialized = true;
     notifyListeners();
-
-    // Load dữ liệu người dùng ngầm — splash tự biến mất khi xong
-    if (supaUser != null) {
-      await _loadUserData(supaUser);
-      notifyListeners();
-    }
-
-    // Listen for sign-in (including OAuth callback) and sign-out
-    _authSub =
-        SupabaseService.instance.onAuthStateChange.listen((state) async {
-      if (state.event == AuthChangeEvent.signedIn &&
-          state.session != null &&
-          _user == null) {
-        await _loadUserData(state.session!.user);
-        notifyListeners();
-      } else if (state.event == AuthChangeEvent.signedOut) {
-        _user = null;
-        _inventory = [];
-        _savedRecipes = [];
-        _recipeCache = [];
-        notifyListeners();
-      }
-    });
   }
 
-  Future<void> _loadUserData(User supaUser) async {
-    // Run independent DB calls in parallel to reduce loading time
+  /// Call after Clerk sign-in so API calls can use [sessionToken].
+  Future<void> bindClerkSession(
+    ClerkAuthState authState,
+    clerk.User clerkUser,
+  ) async {
+    if (_boundUserId == clerkUser.id && _user != null) return;
+
+    BackendApiService.instance.attach(authState);
+    _boundUserId = clerkUser.id;
+    _isLoadingUser = true;
+    notifyListeners();
+
+    try {
+      if (BackendApiService.instance.isConfigured) {
+        await _loadUserData(clerkUser);
+      } else {
+        _user = _appUserFromClerk(clerkUser);
+      }
+    } catch (e, st) {
+      debugPrint('bindClerkSession: $e\n$st');
+      _user = _appUserFromClerk(clerkUser);
+    } finally {
+      _isLoadingUser = false;
+      notifyListeners();
+    }
+  }
+
+  /// Clears local session state (e.g. after sign-out).
+  void clearSession() {
+    _user = null;
+    _inventory = [];
+    _savedRecipes = [];
+    _recipeCache = [];
+    _boundUserId = null;
+    _isLoadingUser = false;
+    BackendApiService.instance.detach();
+    notifyListeners();
+  }
+
+  AppUser _appUserFromClerk(clerk.User u) {
+    final email = u.email ?? '';
+    final name = u.name.trim().isNotEmpty
+        ? u.name.trim()
+        : (email.isNotEmpty ? email.split('@').first : 'User');
+    return AppUser(
+      id: u.id,
+      email: email,
+      name: name,
+      avatarUrl: u.imageUrl ?? u.profileImageUrl,
+    );
+  }
+
+  Future<void> _loadUserData(clerk.User clerkUser) async {
     final results = await Future.wait([
-      SupabaseService.instance.getProfile(supaUser.id),
-      SupabaseService.instance.getFoodItems(supaUser.id),
-      SupabaseService.instance.getSavedRecipes(supaUser.id),
+      BackendApiService.instance.getProfile(),
+      BackendApiService.instance.getFoodItems(clerkUser.id),
+      BackendApiService.instance.getSavedRecipes(clerkUser.id),
     ]);
 
-    final profile = results[0] as Map<String, dynamic>?;
+    final profile = results[0] as Map<String, dynamic>;
     final itemRows = results[1] as List<Map<String, dynamic>>;
     final recipeRows = results[2] as List<Map<String, dynamic>>;
 
-    final displayName = profile?['name'] as String? ??
-        supaUser.userMetadata?['full_name'] as String? ??
-        supaUser.userMetadata?['name'] as String? ??
-        supaUser.email?.split('@').first ??
-        'User';
+    final nameFromProfile = profile['name'] as String?;
+    final displayName = (nameFromProfile != null &&
+            nameFromProfile.trim().isNotEmpty)
+        ? nameFromProfile.trim()
+        : (clerkUser.name.trim().isNotEmpty
+            ? clerkUser.name.trim()
+            : (clerkUser.email?.split('@').first ?? 'User'));
 
-    // Upsert profile for new Google/OAuth users who have no profile row yet
-    if (profile == null) {
-      await SupabaseService.instance.upsertProfile(
-        supaUser.id,
+    if (nameFromProfile == null || nameFromProfile.trim().isEmpty) {
+      await BackendApiService.instance.upsertProfile(
+        clerkUser.id,
         name: displayName,
-        email: supaUser.email,
+        email: clerkUser.email,
       );
     } else {
-      // Sync language / dark-mode from existing profile, then cache locally
       _language = profile['language'] as String? ?? _language;
       _isDark = profile['is_dark'] as bool? ?? _isDark;
       final prefs = await SharedPreferences.getInstance();
@@ -119,18 +133,20 @@ class AppProvider extends ChangeNotifier {
     }
 
     _user = AppUser(
-      id: supaUser.id,
-      email: supaUser.email ?? '',
+      id: clerkUser.id,
+      email: clerkUser.email ?? '',
       name: displayName,
-      avatarUrl: supaUser.userMetadata?['avatar_url'] as String?,
+      avatarUrl: clerkUser.imageUrl ?? clerkUser.profileImageUrl,
     );
 
-    // Load inventory — seed default data for brand-new users in one batch
     if (itemRows.isEmpty) {
       _inventory = _defaultInventory();
-      await SupabaseService.instance.insertFoodItems(supaUser.id, _inventory);
+      await BackendApiService.instance.insertFoodItems(
+        clerkUser.id,
+        _inventory,
+      );
     } else {
-      _inventory = itemRows.map(FoodItem.fromSupabase).toList();
+      _inventory = itemRows.map(FoodItem.fromApiRow).toList();
     }
 
     _savedRecipes = recipeRows
@@ -139,53 +155,34 @@ class AppProvider extends ChangeNotifier {
         .toList();
   }
 
-  @override
-  void dispose() {
-    _authSub?.cancel();
-    super.dispose();
+  // ── Auth (Clerk UI handles sign-in; only sign-out from app) ────────────────
+  Future<void> logout(ClerkAuthState auth) async {
+    clearSession();
+    await auth.signOut();
   }
-
-  // ── Auth ───────────────────────────────────────────────────────────────────
-  Future<bool> login(String email, String password) async {
-    try {
-      await SupabaseService.instance.signInWithEmail(email, password);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<bool> register(String email, String password, String name) async {
-    try {
-      await SupabaseService.instance.signUpWithEmail(email, password, name);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// Opens the device browser for Google OAuth via Supabase.
-  /// The result is handled by the auth-state stream in [init].
-  Future<void> loginWithGoogle() =>
-      SupabaseService.instance.signInWithGoogle(_kOAuthRedirect);
-
-  Future<void> loginWithTestAccount() => login(_kTestEmail, _kTestPassword);
-
-  Future<void> logout() => SupabaseService.instance.signOut();
 
   // ── Inventory ──────────────────────────────────────────────────────────────
   Future<void> addFood(FoodItem item) async {
     _inventory.insert(0, item);
     notifyListeners();
-    if (_user != null) {
-      await SupabaseService.instance.insertFoodItem(_user!.id, item);
+    if (_user != null && BackendApiService.instance.isConfigured) {
+      try {
+        await BackendApiService.instance.insertFoodItem(_user!.id, item);
+      } catch (e, st) {
+        debugPrint('addFood: $e\n$st');
+      }
     }
   }
 
   Future<void> removeFood(String id) async {
     _inventory.removeWhere((e) => e.id == id);
     notifyListeners();
-    await SupabaseService.instance.deleteFoodItem(id);
+    if (!BackendApiService.instance.isConfigured) return;
+    try {
+      await BackendApiService.instance.deleteFoodItem(id);
+    } catch (e, st) {
+      debugPrint('removeFood: $e\n$st');
+    }
   }
 
   Future<void> updateFood(String id, FoodItem updated) async {
@@ -193,7 +190,13 @@ class AppProvider extends ChangeNotifier {
     if (index >= 0) {
       _inventory[index] = updated;
       notifyListeners();
-      await SupabaseService.instance.updateFoodItem(updated);
+      if (BackendApiService.instance.isConfigured) {
+        try {
+          await BackendApiService.instance.updateFoodItem(updated);
+        } catch (e, st) {
+          debugPrint('updateFood: $e\n$st');
+        }
+      }
     }
   }
 
@@ -215,8 +218,12 @@ class AppProvider extends ChangeNotifier {
     if (!exists) {
       _savedRecipes.add(recipe.copyWith(isSaved: true));
       notifyListeners();
-      if (_user != null) {
-        await SupabaseService.instance.saveRecipe(_user!.id, recipe);
+      if (_user != null && BackendApiService.instance.isConfigured) {
+        try {
+          await BackendApiService.instance.saveRecipe(_user!.id, recipe);
+        } catch (e, st) {
+          debugPrint('saveRecipe: $e\n$st');
+        }
       }
     }
   }
@@ -224,8 +231,12 @@ class AppProvider extends ChangeNotifier {
   Future<void> unsaveRecipe(String id) async {
     _savedRecipes.removeWhere((r) => r.id == id);
     notifyListeners();
-    if (_user != null) {
-      await SupabaseService.instance.unsaveRecipe(_user!.id, id);
+    if (_user != null && BackendApiService.instance.isConfigured) {
+      try {
+        await BackendApiService.instance.unsaveRecipe(_user!.id, id);
+      } catch (e, st) {
+        debugPrint('unsaveRecipe: $e\n$st');
+      }
     }
   }
 
@@ -242,9 +253,13 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', lang);
-    if (_user != null) {
-      await SupabaseService.instance
-          .updateProfileSettings(_user!.id, lang, _isDark);
+    if (_user != null && BackendApiService.instance.isConfigured) {
+      try {
+        await BackendApiService.instance
+            .updateProfileSettings(_user!.id, lang, _isDark);
+      } catch (e, st) {
+        debugPrint('setLanguage: $e\n$st');
+      }
     }
   }
 
@@ -253,9 +268,13 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isDark', _isDark);
-    if (_user != null) {
-      await SupabaseService.instance
-          .updateProfileSettings(_user!.id, _language, _isDark);
+    if (_user != null && BackendApiService.instance.isConfigured) {
+      try {
+        await BackendApiService.instance
+            .updateProfileSettings(_user!.id, _language, _isDark);
+      } catch (e, st) {
+        debugPrint('toggleTheme: $e\n$st');
+      }
     }
   }
 

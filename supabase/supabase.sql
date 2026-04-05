@@ -1,6 +1,8 @@
 -- ============================================================
--- Harvest & Hearth — Supabase Schema
--- Chạy toàn bộ file này trong Supabase Dashboard → SQL Editor
+-- DEPRECATED — Ứng dụng đã chuyển sang MongoDB + API Node + Clerk.
+-- Giữ file này chỉ để tham chiếu lịch sử / migrate dữ liệu thủ công.
+-- ============================================================
+-- Harvest & Hearth — Supabase Schema (legacy)
 -- ============================================================
 
 -- ── Tables ───────────────────────────────────────────────────

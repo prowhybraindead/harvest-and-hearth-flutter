@@ -1,15 +1,16 @@
+import 'package:clerk_auth/clerk_auth.dart' as clerk;
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
-import 'models/user.dart';
 import 'providers/app_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/inventory_screen.dart';
 import 'screens/recipes_screen.dart';
 import 'screens/profile_screen.dart';
+import 'services/backend_api_service.dart';
 import 'widgets/add_food_modal.dart';
 
 /// Built once — avoids rebuilding [ColorScheme] / [ThemeData] on every [AppProvider] tick.
@@ -64,30 +65,47 @@ Future<void> main() async {
 
   try {
     await dotenv.load(fileName: '.env');
-  } catch (_) {
-    // .env is optional in CI / first-run dev setups
-  }
+  } catch (_) {}
 
-  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
-  final supabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  final api = dotenv.env['API_BASE_URL'] ?? '';
+  BackendApiService.instance.configure(baseUrl: api);
 
-  if (supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseKey,
-      // PKCE is the secure default for mobile OAuth flows
-      authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.pkce,
-      ),
-    );
-  }
+  final pk = dotenv.env['CLERK_PUBLISHABLE_KEY'] ?? '';
 
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppProvider()..init(),
-      child: const HarvestAndHearthApp(),
+      child: pk.trim().isEmpty
+          ? const _MissingClerkKeyApp()
+          : ClerkAuth(
+              config: ClerkAuthConfig(publishableKey: pk.trim()),
+              child: const HarvestAndHearthApp(),
+            ),
     ),
   );
+}
+
+class _MissingClerkKeyApp extends StatelessWidget {
+  const _MissingClerkKeyApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Harvest & Hearth',
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Thiếu CLERK_PUBLISHABLE_KEY trong .env.\n'
+              'See .env.example.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Only theme + routing inputs — avoids rebuilding [MaterialApp] when inventory/recipes change.
@@ -96,14 +114,10 @@ class _AppUiState {
   const _AppUiState({
     required this.isDark,
     required this.isInitialized,
-    required this.isLoadingUser,
-    required this.user,
   });
 
   final bool isDark;
   final bool isInitialized;
-  final bool isLoadingUser;
-  final AppUser? user;
 
   @override
   bool operator ==(Object other) =>
@@ -111,12 +125,10 @@ class _AppUiState {
       other is _AppUiState &&
           runtimeType == other.runtimeType &&
           isDark == other.isDark &&
-          isInitialized == other.isInitialized &&
-          isLoadingUser == other.isLoadingUser &&
-          user == other.user;
+          isInitialized == other.isInitialized;
 
   @override
-  int get hashCode => Object.hash(isDark, isInitialized, isLoadingUser, user);
+  int get hashCode => Object.hash(isDark, isInitialized);
 }
 
 class HarvestAndHearthApp extends StatelessWidget {
@@ -128,8 +140,6 @@ class HarvestAndHearthApp extends StatelessWidget {
       selector: (_, p) => _AppUiState(
         isDark: p.isDark,
         isInitialized: p.isInitialized,
-        isLoadingUser: p.isLoadingUser,
-        user: p.user,
       ),
       builder: (context, state, _) {
         return MaterialApp(
@@ -138,14 +148,73 @@ class HarvestAndHearthApp extends StatelessWidget {
           themeMode: state.isDark ? ThemeMode.dark : ThemeMode.light,
           theme: kAppLightTheme,
           darkTheme: kAppDarkTheme,
-          home: !state.isInitialized || state.isLoadingUser
+          home: !state.isInitialized
               ? const _SplashScreen()
-              : (state.user == null
-                  ? const AuthScreen()
-                  : const MainShell()),
+              : ClerkErrorListener(
+                  child: ClerkAuthBuilder(
+                    signedOutBuilder: (context, _) => const _SignedOutShell(),
+                    signedInBuilder: (context, _) => const _ClerkBootstrap(),
+                  ),
+                ),
         );
       },
     );
+  }
+}
+
+/// Clears [AppProvider] once when showing the signed-out flow.
+class _SignedOutShell extends StatefulWidget {
+  const _SignedOutShell();
+
+  @override
+  State<_SignedOutShell> createState() => _SignedOutShellState();
+}
+
+class _SignedOutShellState extends State<_SignedOutShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppProvider>().clearSession();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const AuthScreen();
+}
+
+/// Loads profile/inventory from the API after Clerk session is ready.
+class _ClerkBootstrap extends StatefulWidget {
+  const _ClerkBootstrap();
+
+  @override
+  State<_ClerkBootstrap> createState() => _ClerkBootstrapState();
+}
+
+class _ClerkBootstrapState extends State<_ClerkBootstrap> {
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      setState(() => _started = true);
+      final auth = ClerkAuth.of(context, listen: false);
+      final user = auth.client.user;
+      if (user is clerk.User) {
+        await context.read<AppProvider>().bindClerkSession(auth, user);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.watch<AppProvider>();
+    if (!_started || p.isLoadingUser || p.user == null) {
+      return const _SplashScreen();
+    }
+    return const MainShell();
   }
 }
 
@@ -212,7 +281,6 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild shell chrome only when language changes (not on every inventory/recipe tick).
     final lang = context.select<AppProvider, String>((p) => p.language);
     final t = context.read<AppProvider>().t;
 

@@ -82,8 +82,8 @@ class FoodItem {
         'warningDays': warningDays,
       };
 
-  /// Reads a row returned by Supabase (snake_case column names).
-  factory FoodItem.fromSupabase(Map<String, dynamic> row) => FoodItem(
+  /// Reads a row from the REST API (snake_case column names).
+  factory FoodItem.fromApiRow(Map<String, dynamic> row) => FoodItem(
         id: row['id'] as String,
         name: row['name'] as String,
         category: FoodCategoryX.fromString(row['category'] as String),

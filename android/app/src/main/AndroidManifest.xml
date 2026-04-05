@@ -28,16 +28,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Supabase / Google OAuth deep-link callback.
-                 The scheme must match _kOAuthRedirect in app_provider.dart
-                 AND the Supabase dashboard → Auth → URL Configuration → Redirect URLs. -->
+            <!-- Clerk OAuth / magic-link callback (see clerk_auth ClerkConstants.oauthRedirect). -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
-                    android:scheme="io.supabase.harvestandhearth"
-                    android:host="login-callback"/>
+                    android:scheme="com.clerk.flutter"
+                    android:host="callback"/>
             </intent-filter>
         </activity>
         <meta-data

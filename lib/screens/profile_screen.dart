@@ -1,3 +1,4 @@
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
@@ -194,9 +195,10 @@ class ProfileScreen extends StatelessWidget {
             child: Text(t('common_cancel')),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              provider.logout();
+              final auth = ClerkAuth.of(context, listen: false);
+              await provider.logout(auth);
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: Text(t('profile_logout')),
