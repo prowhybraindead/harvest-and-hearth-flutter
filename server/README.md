@@ -23,6 +23,12 @@ PORT=8787
 
 `MONGODB_URI` **không** đặt trong `.env` của app Flutter — chỉ API Node đọc chuỗi này.
 
+### URI sai → `MongoParseError` khi deploy
+
+- **Một** ký tự `@` giữa `password` và hostname: `...PASSWORD@cluster0...` — không được `@@`. Nếu mật khẩu có ký tự đặc biệt (`@`, `#`, `:`, …), [URL-encode](https://www.mongodb.com/docs/manual/reference/connection-string/) phần password (ví dụ `@` → `%40`).
+- Chuỗi query: sau `?` tham số đầu tiên, các tham số sau dùng **`&`**, không dùng `?` lần hai. Sai: `?appName=x?retryWrites=...` — Đúng: `?appName=x&retryWrites=true&w=majority`.
+- Trên **Render**, sửa biến `MONGODB_URI` rồi **Manual Deploy** lại. Nếu URI từng lộ trong log, nên **đổi mật khẩu** user database trên Atlas.
+
 ## Chạy
 
 ```bash

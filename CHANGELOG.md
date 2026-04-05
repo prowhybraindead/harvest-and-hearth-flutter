@@ -144,6 +144,45 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.3.1] — 2026-04-05
+
+### Hiệu năng
+
+- **`BackendApiService`**: Dùng một `http.Client` tái sử dụng cho mọi request (connection reuse); đóng client khi `detach` sau đăng xuất.
+- **`_ClerkBootstrap`**: `Selector` chỉ theo `isLoadingUser` và `user` — tránh rebuild splash/main khi kho hoặc công thức thay đổi trong lúc đang ở luồng bootstrap.
+
+### Tài liệu & build
+
+- **README** / **GITHUB_RELEASE**: Khớp semver `1.0.9+10` và nhãn **b0.3.1**; APK release đặt tên `harvestnhearth-b0.3.1.apk`.
+- **`android/app/build.gradle`**: `versionCode` / `versionName` lấy từ Flutter (`pubspec.yaml`) để khớp bản build.
+
+---
+
+## [b0.3.2] — 2026-04-05
+
+### Clerk — email templates
+
+- Thư mục **`clerk/email-templates/`**: HTML Handlebars (branding Harvest & Hearth) để dán vào Clerk Dashboard → Emails.
+- **Dùng ngay:** [invitation.html](clerk/email-templates/invitation.html), [verification-code.html](clerk/email-templates/verification-code.html) (`{{otp_code}}`). Hướng dẫn: [clerk/email-templates/README.md](clerk/email-templates/README.md).
+- **`AuthScreen`:** ghi chú trong dartdoc — bật *Email verification code* trên Clerk để luồng đăng nhập/đăng ký gửi mã; không đổi widget nếu chiến lược đã bật.
+- **Chuẩn bị / backlog (template HTML có sẵn, chờ bật tính năng Clerk + phiên bản sau):** Account locked, Password changed, Primary email changed, Reset password code, Sign in from new device — xem mục Backlog trong [CHANGELOG.md](CHANGELOG.md) và [README.md](README.md).
+
+---
+
+## [b0.3.3] — 2026-04-05
+
+### Clerk & tài liệu
+
+- **Email (Revolvapp):** [invitation.html](clerk/email-templates/invitation.html), [verification-code.html](clerk/email-templates/verification-code.html) — thẻ `<re-*>`; [README](clerk/email-templates/README.md) (`{{> app_logo}}`, `inviter_name`).
+- **Đăng nhập thử:** nút *Dùng tài khoản thử* khi có `TEST_ACCOUNT_EMAIL` + `TEST_ACCOUNT_PASSWORD` trong `.env`; mật khẩu test đề xuất `!testPassword123!` (đủ điều kiện Clerk).
+- **README:** checklist vận hành; bảng phiên bản cập nhật build này.
+
+### Build
+
+- **`1.0.10+11`** (`versionName` **1.0.10**, `versionCode` **11**); APK đặt tên `harvestnhearth-b0.3.3.apk`.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.
@@ -152,3 +191,8 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 - [x] Đồng bộ dữ liệu qua backend (trước đây Supabase; nay MongoDB + API). ✓
 - [ ] Ảnh thực phẩm tùy chỉnh từ camera.
 - [ ] Widget màn hình chính (Android home screen widget) hiển thị cảnh báo.
+- [ ] **Clerk — Account locked:** bật trên Dashboard + áp dụng [account-locked.html](clerk/email-templates/account-locked.html).
+- [ ] **Clerk — Password changed:** bật thông báo đổi mật khẩu + [password-changed.html](clerk/email-templates/password-changed.html).
+- [ ] **Clerk — Primary email address changed:** [primary-email-changed.html](clerk/email-templates/primary-email-changed.html) (bổ sung biến email nếu Clerk cung cấp).
+- [ ] **Clerk — Reset password code:** luồng quên mật khẩu bằng mã + [reset-password-code.html](clerk/email-templates/reset-password-code.html).
+- [ ] **Clerk — Sign in from new device:** cảnh báo thiết bị lạ + [sign-in-from-new-device.html](clerk/email-templates/sign-in-from-new-device.html) (chi tiết thiết bị/IP qua biến Dashboard).

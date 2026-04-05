@@ -210,11 +210,16 @@ class _ClerkBootstrapState extends State<_ClerkBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<AppProvider>();
-    if (!_started || p.isLoadingUser || p.user == null) {
-      return const _SplashScreen();
-    }
-    return const MainShell();
+    return Selector<AppProvider, ({bool loading, bool hasUser})>(
+      selector: (_, p) =>
+          (loading: p.isLoadingUser, hasUser: p.user != null),
+      builder: (context, s, _) {
+        if (!_started || s.loading || !s.hasUser) {
+          return const _SplashScreen();
+        }
+        return const MainShell();
+      },
+    );
   }
 }
 

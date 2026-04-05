@@ -64,7 +64,9 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 
 | Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
 | --- | --- | --- |
-| **b0.3.0** | `1.0.8+9` | `1.0.8` · `9` |
+| **b0.3.3** | `1.0.10+11` | `1.0.10` · `11` |
+
+**b0.3.2:** template Revolvapp Clerk + backlog template — [CHANGELOG](CHANGELOG.md).
 
 Chi tiết từng bản: [**CHANGELOG.md**](CHANGELOG.md).
 
@@ -111,6 +113,29 @@ Trên **Android emulator**, `localhost` trỏ vào máy dev — dùng `http://10
 flutter run
 ```
 
+### Checklist vận hành (tối thiểu)
+
+| Thành phần | Việc cần có |
+| --- | --- |
+| **Clerk** | Cùng một app: `CLERK_PUBLISHABLE_KEY` (Flutter `.env`) và `CLERK_SECRET_KEY` (Render / `server/.env`). Bật chiến lược đăng nhập (email, Google, …). |
+| **API** | `API_BASE_URL` trỏ HTTPS API thật (vd. Render). `/health` phản hồi 200. |
+| **MongoDB Atlas** | `MONGODB_URI` trên server; Network Access cho IP Render (hoặc `0.0.0.0/0` khi thử — siết lại sau). |
+| **Google OAuth** (nếu dùng) | Client OAuth trên Google Cloud + redirect URI khớp Clerk; app: deep link `com.clerk.flutter://callback` trong allowlist mobile nếu cần. |
+| **Email Clerk** | Template Revolvapp trong `clerk/email-templates/` đã dán trên Dashboard (Invitation, Verification code, …). |
+
+Thiếu một mục (ví dụ secret sai instance, API down, Atlas chặn IP) thì đăng nhập có thể thành công nhưng tải kho / lỗi 401 khi gọi API.
+
+### Tài khoản thử trong APK
+
+Chuẩn đề xuất (đặt trùng trong Clerk khi tạo user): **email** `test@harvestandhearth.app`, **mật khẩu** `!testPassword123!` (đủ yêu cầu phức tạp của Clerk).
+
+1. **Clerk Dashboard** → **Users** → **Create user** (hoặc đăng ký một lần trong app) với cặp trên.  
+2. Trong `.env` của bản build, thêm:
+   `TEST_ACCOUNT_EMAIL` và `TEST_ACCOUNT_PASSWORD` (cùng giá trị).  
+3. Build lại APK — trên màn đăng nhập sẽ có nút **Dùng tài khoản thử**: mở sheet hiển thị email/mật khẩu và **Sao chép** để dán vào form Clerk (SDK không cho điền sẵn form từ code an toàn).
+
+Không đặt `TEST_*` thì nút ẩn; không nhúng mật khẩu trong repo công khai — chỉ trong `.env` build nội bộ.
+
 ---
 
 <a id="build-release"></a>
@@ -125,7 +150,7 @@ flutter build apk --release
 | File | Mô tả |
 | --- | --- |
 | `app-release.apk` | Bản build mặc định của Flutter |
-| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.3.0.apk`) |
+| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.3.3.apk`) |
 
 **Icon launcher:** đặt PNG vuông tại [`code/app_icon.png`](code/app_icon.png), sau đó:
 
@@ -151,6 +176,7 @@ lib/
 ├── screens/                     # auth, dashboard, inventory, recipes, profile, barcode_scanner
 └── widgets/                     # add_food_modal, cards, …
 server/                          # API Node (MongoDB + Clerk JWT) — xem server/README.md
+clerk/email-templates/           # HTML Handlebars dán vào Clerk Dashboard → Emails
 render.yaml                      # Render Blueprint (tuỳ chọn) — deploy Docker từ server/
 ```
 
@@ -174,6 +200,7 @@ render.yaml                      # Render Blueprint (tuỳ chọn) — deploy Do
 - [ ] Danh sách mua sắm tự động từ kho thiếu
 - [ ] Ảnh thực phẩm tuỳ chỉnh từ camera
 - [ ] Widget màn hình chính Android (cảnh báo)
+- [ ] **Clerk:** Account locked, Password changed, Primary email changed, Reset password code, Sign in from new device — HTML có sẵn trong [`clerk/email-templates/`](clerk/email-templates/README.md); bật tính năng + dán template trên Dashboard (phiên bản sau).
 
 ---
 

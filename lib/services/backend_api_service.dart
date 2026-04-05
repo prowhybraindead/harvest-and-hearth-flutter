@@ -17,6 +17,10 @@ class BackendApiService {
 
   ClerkAuthState? _auth;
   String _base = '';
+  /// Reused for connection pooling across API calls (closed on [detach]).
+  http.Client? _httpClient;
+
+  http.Client get _http => _httpClient ??= http.Client();
 
   void configure({required String baseUrl}) {
     _base = baseUrl.replaceAll(RegExp(r'/$'), '');
@@ -26,7 +30,11 @@ class BackendApiService {
 
   void attach(ClerkAuthState auth) => _auth = auth;
 
-  void detach() => _auth = null;
+  void detach() {
+    _auth = null;
+    _httpClient?.close();
+    _httpClient = null;
+  }
 
   Future<String> _jwt() async {
     final a = _auth;
@@ -45,31 +53,31 @@ class BackendApiService {
   Uri _u(String path) => Uri.parse('$_base$path');
 
   Future<http.Response> _get(Uri url, {Map<String, String>? headers}) =>
-      http.get(url, headers: headers).timeout(_kTimeout);
+      _http.get(url, headers: headers).timeout(_kTimeout);
 
   Future<http.Response> _delete(Uri url, {Map<String, String>? headers}) =>
-      http.delete(url, headers: headers).timeout(_kTimeout);
+      _http.delete(url, headers: headers).timeout(_kTimeout);
 
   Future<http.Response> _post(
     Uri url, {
     Map<String, String>? headers,
     Object? body,
   }) =>
-      http.post(url, headers: headers, body: body).timeout(_kTimeout);
+      _http.post(url, headers: headers, body: body).timeout(_kTimeout);
 
   Future<http.Response> _put(
     Uri url, {
     Map<String, String>? headers,
     Object? body,
   }) =>
-      http.put(url, headers: headers, body: body).timeout(_kTimeout);
+      _http.put(url, headers: headers, body: body).timeout(_kTimeout);
 
   Future<http.Response> _patch(
     Uri url, {
     Map<String, String>? headers,
     Object? body,
   }) =>
-      http.patch(url, headers: headers, body: body).timeout(_kTimeout);
+      _http.patch(url, headers: headers, body: body).timeout(_kTimeout);
 
   void _throwIfBad(http.Response r) {
     if (r.statusCode >= 200 && r.statusCode < 300) return;
