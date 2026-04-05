@@ -167,9 +167,14 @@ class Translations {
     'time_simulator_reset': 'Về giờ thực',
     'time_simulator_test_notif': 'Gửi thông báo thử ngay',
     'time_simulator_test_sent': 'Đã gửi thông báo thử.',
+    'time_simulator_test_notif_denied':
+        'Không gửi được thông báo — hãy bật quyền Thông báo cho ứng dụng trong Cài đặt Android.',
     'time_simulator_hint':
         'Cộng dồn vào offset mô phỏng; danh sách hết hạn và widget cập nhật theo “hôm nay” giả lập. Ngày lưu trong kho không đổi.',
     'widget_line1': 'Sắp hết: {expiring} · Hết hạn: {expired}',
+    'widget_subtitle': 'Tóm tắt kho',
+    'widget_label_expiring': 'Sắp hết',
+    'widget_label_expired': 'Hết hạn',
     'widget_all_ok': 'Không có cảnh báo',
 
     // Food detail / edit
@@ -355,9 +360,14 @@ class Translations {
     'time_simulator_reset': 'Reset to real time',
     'time_simulator_test_notif': 'Send test notification now',
     'time_simulator_test_sent': 'Test notification sent.',
+    'time_simulator_test_notif_denied':
+        'Could not show notification — enable Notifications for this app in Android Settings.',
     'time_simulator_hint':
         'Offsets stack; expiry lists and widget use the simulated “today”. Stored dates are unchanged.',
     'widget_line1': 'Expiring: {expiring} · Expired: {expired}',
+    'widget_subtitle': 'Pantry summary',
+    'widget_label_expiring': 'Expiring',
+    'widget_label_expired': 'Expired',
     'widget_all_ok': 'No alerts',
 
     // Food detail / edit

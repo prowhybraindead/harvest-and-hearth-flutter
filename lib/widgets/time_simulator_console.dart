@@ -100,17 +100,23 @@ class TimeSimulatorFab extends StatelessWidget {
                     const SizedBox(height: 8),
                     FilledButton.tonalIcon(
                       onPressed: () async {
-                        await ExpiryReminderService.instance
-                            .showImmediateTestSummary(
+                        final ok =
+                            await ExpiryReminderService.instance
+                                .showImmediateTestSummary(
                           expiring: expiring,
                           expired: expired,
                           language: p.language,
                         );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(t('time_simulator_test_sent'))),
-                          );
-                        }
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ok
+                                  ? t('time_simulator_test_sent')
+                                  : t('time_simulator_test_notif_denied'),
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.notifications_active_outlined),
                       label: Text(t('time_simulator_test_notif')),

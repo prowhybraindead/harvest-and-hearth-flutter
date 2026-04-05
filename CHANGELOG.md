@@ -225,6 +225,19 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.4.3] — 2026-04-06
+
+### Cải tiến
+
+- **Widget Android:** giao diện thẻ bo góc, icon app, phụ đề, hai ô thống kê (sắp hết / hết hạn) có màu tách biệt; dữ liệu đa ngôn ngữ qua `HomeWidgetService`.
+- **Thông báo thử (console thời gian):** xin quyền **POST_NOTIFICATIONS** (Android 13+) / iOS trước khi gửi; kênh **`harvest_expiry_immediate`** mức ưu tiên cao; SnackBar khi người dùng từ chối quyền.
+
+### Build
+
+- **`1.0.15+16`** (`versionName` **1.0.15**, `versionCode` **16**); APK `harvestnhearth-b0.4.3.apk`.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.

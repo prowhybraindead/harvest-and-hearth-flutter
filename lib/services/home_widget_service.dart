@@ -33,6 +33,20 @@ class HomeWidgetService {
 
     try {
       await HomeWidget.saveWidgetData<String>('line1', line1);
+      await HomeWidget.saveWidgetData<String>('expiring_count', '${expiring.length}');
+      await HomeWidget.saveWidgetData<String>('expired_count', '${expired.length}');
+      await HomeWidget.saveWidgetData<String>(
+        'label_expiring',
+        Translations.get('widget_label_expiring', lang),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'label_expired',
+        Translations.get('widget_label_expired', lang),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'subtitle',
+        Translations.get('widget_subtitle', lang),
+      );
       await HomeWidget.saveWidgetData<String>('line2', line2Short);
       await HomeWidget.updateWidget(
         androidName: 'HarvestWidgetProvider',
@@ -48,6 +62,11 @@ class HomeWidgetService {
     if (!Platform.isAndroid) return;
     try {
       await HomeWidget.saveWidgetData<String>('line1', '');
+      await HomeWidget.saveWidgetData<String>('expiring_count', '0');
+      await HomeWidget.saveWidgetData<String>('expired_count', '0');
+      await HomeWidget.saveWidgetData<String>('label_expiring', '');
+      await HomeWidget.saveWidgetData<String>('label_expired', '');
+      await HomeWidget.saveWidgetData<String>('subtitle', '');
       await HomeWidget.saveWidgetData<String>('line2', '');
       await HomeWidget.updateWidget(
         androidName: 'HarvestWidgetProvider',

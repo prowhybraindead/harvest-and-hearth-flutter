@@ -64,7 +64,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 
 | Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
 | --- | --- | --- |
-| **b0.4.2** | `1.0.14+15` | `1.0.14` · `15` |
+| **b0.4.3** | `1.0.15+16` | `1.0.15` · `16` |
 
 **b0.3.2:** template Revolvapp Clerk + backlog template — [CHANGELOG](CHANGELOG.md).
 
@@ -151,7 +151,7 @@ flutter build apk --release
 | File | Mô tả |
 | --- | --- |
 | `app-release.apk` | Bản build mặc định của Flutter |
-| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.4.2.apk`) |
+| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.4.3.apk`) |
 
 **Icon launcher:** đặt PNG vuông tại [`code/app_icon.png`](code/app_icon.png), sau đó:
 

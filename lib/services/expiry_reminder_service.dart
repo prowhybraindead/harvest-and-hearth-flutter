@@ -17,6 +17,8 @@ class ExpiryReminderService {
 
   static const prefsKeyEnabled = 'expiry_reminders_enabled';
   static const _channelId = 'harvest_expiry';
+  /// High-importance channel for immediate / heads-up notifications (Android 8+).
+  static const _channelIdImmediate = 'harvest_expiry_immediate';
   static const _notificationIdSummary = 10001;
   static const _notificationIdSimulatorTest = 10002;
 
@@ -49,6 +51,14 @@ class ExpiryReminderService {
           'Nhắc hạn thực phẩm',
           description: 'Thông báo khi có mặt hàng sắp hết hạn hoặc đã hết hạn',
           importance: Importance.defaultImportance,
+        ),
+      );
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _channelIdImmediate,
+          'Harvest & Hearth — Thông báo ngay',
+          description: 'Thông báo thử và cảnh báo hiển thị ngay',
+          importance: Importance.high,
         ),
       );
     }
@@ -150,12 +160,35 @@ class ExpiryReminderService {
   }
 
   /// Immediate notification with the same copy as the daily summary (QA / time simulator).
-  Future<void> showImmediateTestSummary({
+  /// Returns `false` if the user denied notification permission (Android 13+ / iOS).
+  Future<bool> showImmediateTestSummary({
     required int expiring,
     required int expired,
     required String language,
   }) async {
     if (!_initialized) await init();
+
+    if (Platform.isAndroid) {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      final granted = await android?.requestNotificationsPermission();
+      if (granted == false) {
+        debugPrint('ExpiryReminderService: POST_NOTIFICATIONS denied');
+        return false;
+      }
+    } else if (Platform.isIOS) {
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      final ok = await ios?.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (ok == false) {
+        debugPrint('ExpiryReminderService: iOS notification permission denied');
+        return false;
+      }
+    }
 
     final lang = language == 'ENG' ? 'ENG' : 'VIE';
     final title = Translations.get('expiry_notif_title', lang);
@@ -164,13 +197,21 @@ class ExpiryReminderService {
         .replaceAll('{expiring}', '$expiring');
 
     final android = AndroidNotificationDetails(
-      _channelId,
-      'Nhắc hạn thực phẩm',
-      channelDescription: 'Tóm tắt mỗi ngày lúc 9:00',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+      _channelIdImmediate,
+      'Harvest & Hearth — Thông báo ngay',
+      channelDescription: 'Thông báo thử và cảnh báo hiển thị ngay',
+      importance: Importance.high,
+      priority: Priority.high,
+      visibility: NotificationVisibility.public,
+      showWhen: true,
+      enableVibration: true,
+      playSound: true,
     );
-    const ios = DarwinNotificationDetails();
+    const ios = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
     final details = NotificationDetails(android: android, iOS: ios);
 
     try {
@@ -180,8 +221,10 @@ class ExpiryReminderService {
         body,
         details,
       );
+      return true;
     } catch (e, st) {
       debugPrint('ExpiryReminderService showImmediateTestSummary: $e\n$st');
+      return false;
     }
   }
 }

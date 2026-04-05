@@ -2,4 +2,6 @@
 <resources>
     <string name="widget_label">Harvest &amp; Hearth</string>
     <string name="widget_description">Tóm tắt thực phẩm sắp hết hạn và đã hết hạn</string>
+    <string name="widget_fallback_expiring">Sắp hết</string>
+    <string name="widget_fallback_expired">Hết hạn</string>
 </resources>
