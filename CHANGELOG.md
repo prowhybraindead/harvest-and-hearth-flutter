@@ -1,0 +1,85 @@
+# CHANGELOG
+
+Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter** sẽ được ghi nhận tại đây.
+
+Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/).
+
+---
+
+## [b0.1.0] — 2026-04-05
+
+### Thêm mới
+- **Xác thực người dùng**: Màn hình đăng nhập / đăng ký với validation. Hỗ trợ tài khoản thử cho phép bỏ qua form để kiểm tra nhanh.
+- **Trang chủ (Dashboard)**: Hiển thị lời chào cá nhân hoá, thống kê số lượng thực phẩm, cảnh báo các mặt hàng hết hạn hoặc sắp hết hạn, danh sách 3 mặt hàng vừa thêm gần nhất, và mẹo hàng ngày.
+- **Kho thực phẩm (Inventory)**: Quản lý thực phẩm theo hai ngăn — Tủ lạnh và Ngăn đông. Hỗ trợ tìm kiếm theo tên và sắp xếp theo tên / ngày hết hạn / ngày thêm. Xoá mặt hàng với hộp thoại xác nhận.
+- **Thêm thực phẩm**: Form nhập liệu đầy đủ gồm tên, danh mục (8 loại), vị trí lưu trữ, số lượng, đơn vị, ngày hết hạn, và số ngày cảnh báo trước. Có nút quét mã vạch giả lập.
+- **Công thức nấu ăn (Recipes)**:
+  - AI Chef tự động gợi ý 3 công thức dựa trên nguyên liệu hiện có trong tủ, ưu tiên nguyên liệu sắp hết hạn.
+  - Xem chi tiết công thức: thành phần, các bước nấu, thời gian, calo, khẩu phần, độ khó.
+  - Lưu và bỏ lưu công thức yêu thích.
+- **Hồ sơ (Profile)**: Chuyển đổi ngôn ngữ Việt – Anh. Bật/tắt chế độ tối. Xem thống kê cá nhân (số mặt hàng, công thức đã lưu, số hàng hết hạn). Đăng xuất.
+- **Hỗ trợ đa ngôn ngữ**: Toàn bộ giao diện hỗ trợ tiếng Việt và tiếng Anh, chuyển đổi tức thời không cần khởi động lại.
+- **Chế độ tối**: Chủ đề sáng/tối theo Material 3, lưu lại lựa chọn sau khi tắt app.
+- **Lưu trữ cục bộ**: Toàn bộ dữ liệu (thực phẩm, công thức đã lưu, cài đặt) được lưu trên thiết bị qua SharedPreferences và không cần kết nối mạng (trừ tính năng AI).
+
+---
+
+## [b0.1.1] — 2026-04-05
+
+### Sửa lỗi
+
+- **Ứng dụng không khởi động được trên Android**: Lỗi build Gradle ngăn ứng dụng cài lên thiết bị. Đã được vá hoàn toàn, ứng dụng cài và chạy bình thường.
+
+### Cải tiến
+
+- **AI thông minh hơn với hệ thống dự phòng**: Tích hợp thêm Groq AI (Llama 3.3) làm nguồn chính để tạo công thức nhanh hơn. Nếu Groq không phản hồi, ứng dụng tự động chuyển sang Gemini mà người dùng không cần làm gì.
+- **Hỗ trợ Android mới nhất (SDK 36)**: Đảm bảo tương thích với các thiết bị Android mới nhất.
+
+---
+
+## [b0.1.2] — 2026-04-05
+
+- **Đăng nhập bằng Google**: Nút "Đăng nhập với Google" trên màn hình xác thực. Ứng dụng mở trình duyệt, người dùng chọn tài khoản Google, rồi tự động quay lại app — không cần nhớ mật khẩu.
+- **Lưu trữ đám mây (Supabase)**: Dữ liệu thực phẩm và công thức đã lưu nay được lưu trên cloud thay vì chỉ trong bộ nhớ thiết bị. Đăng nhập trên thiết bị khác vẫn thấy đầy đủ dữ liệu.
+- **Tab "Khám phá" trong màn hình Công thức**:
+  - Mặc định hiển thị danh sách **món ăn Việt Nam** từ TheMealDB (có ảnh, nhấn để xem chi tiết nguyên liệu và các bước nấu).
+  - Thanh tìm kiếm để tra cứu bất kỳ tên món nào — kết quả đến từ TheMealDB và DuckDuckGo cùng lúc.
+  - Có thể lưu công thức tìm được vào danh sách yêu thích giống công thức AI.
+- **Dịch thuật tức thì**: Mỗi công thức tìm được từ API hoặc DuckDuckGo đều có nút "Dịch" — ứng dụng tự động dịch tên và mô tả sang ngôn ngữ đang dùng (Việt hoặc Anh). Nhấn lại để xem bản gốc.
+- **Mở trang web nguồn**: Kết quả tìm từ DuckDuckGo hoặc TheMealDB đều có nút "Mở trang web" để xem bài viết gốc đầy đủ trong trình duyệt.
+
+---
+
+## [b0.1.3] — 2026-04-05
+
+- **Link xác nhận email mở đúng app**: Trước đây nhấn link trong email xác nhận tài khoản sẽ trỏ về localhost. Nay link tự động mở thẳng vào ứng dụng.
+- **Đăng nhập Google tải nhanh hơn**: Sau khi xác thực Google, app không còn loading lâu. Dữ liệu người dùng được tải song song thay vì tuần tự.
+- **Hồ sơ Google được lưu đúng cách**: Người dùng đăng nhập lần đầu bằng Google nay có hồ sơ được tạo tự động trên hệ thống.
+- **Email xác nhận tài khoản**: Giao diện email đẹp với logo và màu sắc của app, gửi khi đăng ký bằng email/mật khẩu.
+- **Email xác thực lại (OTP)**: Giao diện email hiển thị mã OTP nổi bật, kèm hướng dẫn bảo mật.
+
+---
+
+## [b0.1.4] — 2026-04-05
+
+- **Màn hình đăng nhập hiện nhanh hơn**: Splash screen không còn đứng yên chờ tải dữ liệu. Nếu chưa đăng nhập, app vào màn hình đăng nhập ngay lập tức. Nếu đã đăng nhập, splash giữ trong lúc tải dữ liệu ngầm rồi vào thẳng app — không còn màn hình trắng hay loading lâu.
+
+---
+
+## [b0.1.5] — 2026-04-05
+
+- **Chi tiết và chỉnh sửa thực phẩm**: Nhấn vào bất kỳ mặt hàng nào trong kho để xem đầy đủ thông tin (danh mục, số lượng, ngày hết hạn) và chỉnh sửa trực tiếp. Không cần xoá rồi thêm lại.
+- **Card thực phẩm cải tiến**: Mỗi card nay hiển thị nhãn danh mục màu sắc, ngày hết hạn cụ thể (dd/mm/yyyy) kèm nhãn tương đối ("5 ngày còn lại"), và nút chỉnh sửa riêng.
+- **Xoá ngày hết hạn**: Khi chỉnh sửa, có thể xoá ngày hết hạn nếu không cần theo dõi.
+- **Tối ưu hiệu năng**: Màn hình Khám phá không tải lại danh sách món Việt Nam mỗi lần chuyển tab. Kho thực phẩm chỉ rebuild khi dữ liệu kho thay đổi, không bị ảnh hưởng bởi cập nhật công thức.
+
+---
+
+## Sắp ra mắt (Backlog)
+
+- [ ] Quét mã vạch thực sự bằng camera (thay thế giả lập hiện tại).
+- [ ] Thông báo nhắc nhở khi thực phẩm sắp hết hạn.
+- [ ] Danh sách mua sắm tự động từ kho thiếu.
+- [x] Đồng bộ dữ liệu qua Supabase. ✓ Hoàn thành ở v1.2.0
+- [ ] Ảnh thực phẩm tùy chỉnh từ camera.
+- [ ] Widget màn hình chính (Android home screen widget) hiển thị cảnh báo.
