@@ -211,6 +211,20 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.4.2] — 2026-04-06
+
+### Hotfix
+
+- **Email Clerk:** toàn bộ `clerk/email-templates/` chuyển sang định dạng **Revolvapp** (`<re-html>` / `<re-*>`), đồng bộ với editor Dashboard.
+- **Nút mô phỏng thời gian:** trên bản **release** mặc định **hiện** FAB (trừ khi `.env` có `ENABLE_TIME_SIMULATOR=false` / `0` / `no`); debug luôn bật.
+- **Widget Android:** `receiver` có `label` + `icon` để dễ tìm trong danh sách widget; gợi ý thêm widget trong **Hồ sơ** và **README**.
+
+### Build
+
+- **`1.0.14+15`** (`versionName` **1.0.14**, `versionCode` **15**); APK `harvestnhearth-b0.4.2.apk`.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.

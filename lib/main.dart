@@ -1,6 +1,5 @@
 import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -293,7 +292,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final lang = context.select<AppProvider, String>((p) => p.language);
     final t = context.read<AppProvider>().t;
-    final showTimeSim = kDebugMode || timeSimulatorEnabled();
+    final showTimeSim = isTimeSimulatorFabVisible();
 
     return Scaffold(
       body: Stack(

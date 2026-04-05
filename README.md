@@ -35,7 +35,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 | | |
 | --- | --- |
 | **Kho thực phẩm** | Tủ lạnh / Ngăn đông, tìm kiếm, sắp xếp, xem & chỉnh sửa. **Quét mã vạch / QR** bằng camera (đèn flash). |
-| **Cảnh báo hết hạn** | Gom mặt hàng hết hạn & sắp hết hạn trên trang chủ; **thông báo định kỳ** (Android ~9:00); **widget màn hình chính** (Android). |
+| **Cảnh báo hết hạn** | Gom mặt hàng hết hạn & sắp hết hạn trên trang chủ; **thông báo định kỳ** (Android ~9:00); **widget** (Android — thêm thủ công từ màn hình chính). **Nút mô phỏng thời gian** (góc trái) để test thông báo; tắt bằng `ENABLE_TIME_SIMULATOR=false` trong `.env` khi build. |
 | **AI Chef** | Groq (Llama 3.3) gợi ý 3 công thức từ nguyên liệu trong tủ; fallback **Gemini** nếu Groq lỗi. |
 | **Khám phá** | Món Việt Nam (TheMealDB), tìm kiếm TheMealDB + DuckDuckGo, lưu công thức. |
 | **Dịch** | Dịch tên/mô tả công thức theo ngôn ngữ đang dùng. |
@@ -64,7 +64,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 
 | Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
 | --- | --- | --- |
-| **b0.4.1** | `1.0.13+14` | `1.0.13` · `14` |
+| **b0.4.2** | `1.0.14+15` | `1.0.14` · `15` |
 
 **b0.3.2:** template Revolvapp Clerk + backlog template — [CHANGELOG](CHANGELOG.md).
 
@@ -151,7 +151,7 @@ flutter build apk --release
 | File | Mô tả |
 | --- | --- |
 | `app-release.apk` | Bản build mặc định của Flutter |
-| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.4.1.apk`) |
+| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.4.2.apk`) |
 
 **Icon launcher:** đặt PNG vuông tại [`code/app_icon.png`](code/app_icon.png), sau đó:
 

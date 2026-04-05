@@ -154,7 +154,7 @@ class Translations {
     'profile_preferences': 'Tùy chọn',
     'profile_expiry_reminders': 'Nhắc hạn & widget màn hình chính',
     'profile_expiry_reminders_sub':
-        'Thông báo tóm tắt mỗi sáng 9:00; widget hiển thị số món sắp hết / hết hạn.',
+        'Thông báo tóm tắt mỗi sáng 9:00. Widget Android: giữ màn hình chính → Tiện ích / Widget → tìm “Harvest & Hearth” và thêm.',
 
     // Notifications / widget
     'expiry_notif_title': 'Harvest & Hearth · Kho nhà',
@@ -342,7 +342,7 @@ class Translations {
     'profile_preferences': 'Preferences',
     'profile_expiry_reminders': 'Expiry reminders & home widget',
     'profile_expiry_reminders_sub':
-        'Daily summary at 9:00; widget shows expiring and expired counts.',
+        'Daily summary at 9:00. Android: long-press home → Widgets → add “Harvest & Hearth”.',
 
     // Notifications / widget
     'expiry_notif_title': 'Harvest & Hearth · Pantry',

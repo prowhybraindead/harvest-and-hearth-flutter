@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -6,10 +7,12 @@ import '../core/simulated_clock.dart';
 import '../providers/app_provider.dart';
 import '../services/expiry_reminder_service.dart';
 
-/// Whether to show the floating time-simulator control (debug or `.env`).
-bool timeSimulatorEnabled() {
+/// Debug: always on. Release: on unless `.env` sets `ENABLE_TIME_SIMULATOR` to `false`, `0`, or `no`.
+bool isTimeSimulatorFabVisible() {
+  if (kDebugMode) return true;
   final v = dotenv.env['ENABLE_TIME_SIMULATOR']?.toLowerCase().trim();
-  return v == 'true' || v == '1' || v == 'yes';
+  if (v == 'false' || v == '0' || v == 'no') return false;
+  return true;
 }
 
 class TimeSimulatorFab extends StatelessWidget {

@@ -31,8 +31,13 @@ Theo template mặc định Clerk, tên người mời là **`inviter_name`** (k
 | --- | --- | --- |
 | [invitation.html](invitation.html) | **Invitation** | `{{> app_logo}}`, `inviter_name`, `invitation.expires_in_days`, `{{action_url}}`, `{{current_year}}` |
 | [verification-code.html](verification-code.html) | **Verification code** | `{{> app_logo}}`, `{{{otp_code}}}`, `{{current_year}}` — nếu Preview không nhận `otp_code`, chọn đúng biến mã trong nút **Variable** của template đó |
+| [account-locked.html](account-locked.html) | **Account locked** | `{{> app_logo}}`, `{{action_url}}`, `{{current_year}}` |
+| [password-changed.html](password-changed.html) | **Password changed** | `{{> app_logo}}`, `{{action_url}}` |
+| [primary-email-changed.html](primary-email-changed.html) | **Primary email address changed** | `{{> app_logo}}`, `{{action_url}}` |
+| [reset-password-code.html](reset-password-code.html) | **Reset password code** | `{{> app_logo}}`, `{{{otp_code}}}` — kiểm tra tên biến mã trong **Variable** |
+| [sign-in-from-new-device.html](sign-in-from-new-device.html) | **Sign in from new device** | `{{> app_logo}}`, `{{action_url}}` |
 
-Các file **account-locked**, **password-changed**, … hiện vẫn là HTML cũ trong repo — khi dùng nên **đổi sang cùng kiểu `re-*`** như hai file trên (hoặc chỉnh trong Dashboard từ template mặc định Clerk rồi copy cấu trúc).
+Tất cả file trên dùng cùng định dạng **Revolvapp** (`<re-html>` …), không dùng `<!DOCTYPE html>` / `<table>` email cổ điển.
 
 ## Đăng nhập bằng mã email (OTP)
 
