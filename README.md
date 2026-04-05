@@ -63,7 +63,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 
 | Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
 | --- | --- | --- |
-| **b0.1.8** | `1.0.5+6` | `1.0.5` · `6` |
+| **b0.1.10** | `1.0.7+8` | `1.0.7` · `8` |
 
 Chi tiết từng bản: [**CHANGELOG.md**](CHANGELOG.md).
 
@@ -104,9 +104,18 @@ flutter run
 flutter build apk --release
 ```
 
-File đầu ra mặc định:
+**Đầu ra APK** (`build/app/outputs/flutter-apk/`):
 
-`build/app/outputs/flutter-apk/app-release.apk`
+| File | Mô tả |
+| --- | --- |
+| `app-release.apk` | Bản build mặc định của Flutter |
+| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.1.10.apk`) |
+
+**Icon launcher:** đặt PNG vuông tại [`code/app_icon.png`](code/app_icon.png), sau đó:
+
+```bash
+dart run flutter_launcher_icons
+```
 
 *(Tuỳ chọn Play Store: `flutter build appbundle --release` → `build/app/outputs/bundle/release/app-release.aab`.)*
 

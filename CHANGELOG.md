@@ -108,6 +108,19 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.1.9] — 2026-04-05
+
+- **Icon ứng dụng**: Logo nguồn tại `code/app_icon.png`; tạo icon Android (adaptive) và iOS bằng `flutter_launcher_icons`. Thay file PNG trong `code/` rồi chạy `dart run flutter_launcher_icons` để cập nhật.
+- **Tên file APK release**: Sau `flutter build apk --release`, thêm bản sao `harvestnhearth-<nhãn_CHANGELOG>.apk` trong cùng thư mục với `app-release.apk` (nhãn = mục `## [b0.x.x]` **cuối cùng** trong `CHANGELOG.md`).
+
+---
+
+## [b0.1.10] — 2026-04-05
+
+- **Bản build đồ án / GitHub Release**: APK release (`app-release.apk` và `harvestnhearth-b0.1.10.apk`) dùng để nộp báo cáo và đính kèm release; không phát hành lên store.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.
