@@ -183,14 +183,42 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.4.0] — 2026-04-05
+
+### Thông báo & widget (Android)
+
+- **Nhắc hạn:** `ExpiryReminderService` — thông báo tóm tắt mỗi ngày **9:00** (giờ địa phương) khi có mặt hàng **sắp hết hạn** hoặc **đã hết hạn** (theo `FoodItem.isExpiringSoon` / `isExpired`). Kênh Android `harvest_expiry`; bật/tắt trong **Hồ sơ**; xin quyền `POST_NOTIFICATIONS` (Android 13+).
+- **Widget màn hình chính:** `home_widget` + `HarvestWidgetProvider` — hai dòng: số lượng sắp hết / hết hạn + tên mặt hàng (rút gọn). Thêm widget từ launcher → widget Harvest & Hearth.
+- **Gradle:** `coreLibraryDesugaring` (yêu cầu của `flutter_local_notifications`).
+
+### Build
+
+- **`1.0.12+13`** (`versionName` **1.0.12**, `versionCode` **13**); APK `harvestnhearth-b0.4.0.apk`.
+
+---
+
+## [b0.4.1] — 2026-04-05
+
+### QA / kiểm thử thông báo hạn
+
+- **Đồng hồ mô phỏng (`SimulatedClock`):** “Hôm nay” dùng cho tính hết hạn / sắp hết có thể lệch so với đồng hồ thật — **không sửa ngày đã lưu** trong kho.
+- **Console thời gian (FAB góc trái):** preset **+1 / +3 / +7 ngày** (cộng dồn), **Về giờ thực**, **Gửi thông báo thử ngay** (cùng nội dung với bản tóm tắt hằng ngày).
+- **Hiển thị:** mặc định trong **debug**; bản release có thể bật bằng `ENABLE_TIME_SIMULATOR=true` trong `.env` (xem `.env.example`).
+
+### Build
+
+- **`1.0.13+14`** (`versionName` **1.0.13**, `versionCode` **14**); APK `harvestnhearth-b0.4.1.apk`.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.
-- [ ] Thông báo nhắc nhở khi thực phẩm sắp hết hạn.
+- [x] Thông báo nhắc nhở khi thực phẩm sắp hết hạn.
 - [ ] Danh sách mua sắm tự động từ kho thiếu.
 - [x] Đồng bộ dữ liệu qua backend (trước đây Supabase; nay MongoDB + API). ✓
 - [ ] Ảnh thực phẩm tùy chỉnh từ camera.
-- [ ] Widget màn hình chính (Android home screen widget) hiển thị cảnh báo.
+- [x] Widget màn hình chính (Android home screen widget) hiển thị cảnh báo.
 - [ ] **Clerk — Account locked:** bật trên Dashboard + áp dụng [account-locked.html](clerk/email-templates/account-locked.html).
 - [ ] **Clerk — Password changed:** bật thông báo đổi mật khẩu + [password-changed.html](clerk/email-templates/password-changed.html).
 - [ ] **Clerk — Primary email address changed:** [primary-email-changed.html](clerk/email-templates/primary-email-changed.html) (bổ sung biến email nếu Clerk cung cấp).

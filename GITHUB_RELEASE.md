@@ -1,13 +1,13 @@
 # Nội dung gợi ý cho GitHub Release
 
-Sao chép phần dưới khi tạo **Release** (tag gợi ý: `v1.0.10` hoặc `b0.3.3`).
+Sao chép phần dưới khi tạo **Release** (tag gợi ý: `v1.0.13` hoặc `b0.4.1`).
 
 ---
 
 ## Release title (tiêu đề)
 
 ```
-Harvest & Hearth b0.3.3 · Clerk email Revolvapp + tài khoản thử
+Harvest & Hearth b0.4.1 · Console mô phỏng thời gian (QA thông báo)
 ```
 
 ---
@@ -15,42 +15,35 @@ Harvest & Hearth b0.3.3 · Clerk email Revolvapp + tài khoản thử
 ## Release notes (mô tả — Markdown)
 
 ```markdown
-## Harvest & Hearth `b0.3.3` · `1.0.10+11`
+## Harvest & Hearth `b0.4.1` · `1.0.13+14`
 
 ### Ứng dụng
-- Semver build **1.0.10** (`versionCode` **11**).
-- Template email Clerk dạng **Revolvapp** (`clerk/email-templates/invitation.html`, `verification-code.html`); hướng dẫn logo `{{> app_logo}}` trong `clerk/email-templates/README.md`.
-- Nút **Dùng tài khoản thử** (khi đặt `TEST_ACCOUNT_EMAIL` + `TEST_ACCOUNT_PASSWORD` trong `.env`); mật khẩu test đề xuất: `!testPassword123!`.
-- Trước đó: HTTP client tái sử dụng, bootstrap Clerk tối ưu — xem CHANGELOG đầy đủ.
+- **Thông báo & widget (như b0.4.0):** tóm tắt ~9:00 khi có món sắp hết / hết hạn; widget Android; bật/tắt trong **Hồ sơ**.
+- **Console mô phỏng thời gian (QA):** FAB góc trái — tua nhanh **+1 / +3 / +7 ngày** (cộng dồn), reset về giờ thực, **gửi thông báo thử ngay**. Trong release APK: đặt `ENABLE_TIME_SIMULATOR=true` trong `.env` nếu cần (mặc định chỉ bật sẵn trong debug).
+- Build **1.0.13** (`versionCode` **14**).
 
-### Backend (`server/`)
-- Không đổi hợp đồng API trong bản build này — xem `server/README.md`, `render.yaml`.
+### Backend
+- Không đổi API — xem `server/README.md`.
 
-### Tệp đính kèm APK (build local)
-- **`app-release.apk`**
-- **`harvestnhearth-b0.3.3.apk`**
+### APK
+- `app-release.apk` · `harvestnhearth-b0.4.1.apk`
 
-### Cấu hình
-1. `.env` app: `CLERK_PUBLISHABLE_KEY`, `API_BASE_URL`, Groq, Gemini; tuỳ chọn `TEST_ACCOUNT_*` cho nút tài khoản thử.
-2. Secrets API: `MONGODB_URI`, `CLERK_SECRET_KEY`.
-3. Clerk: Google OAuth + **Allowlist mobile SSO** `com.clerk.flutter://callback` nếu dùng.
-
-### Changelog đầy đủ
+### Changelog
 [Xem CHANGELOG.md](https://github.com/prowhybraindead/harvest-and-hearth-flutter/blob/main/CHANGELOG.md)
 ```
 
 ---
 
-## Tài sản đính kèm (Attachments)
+## Tài sản đính kèm
 
-| File | Đường dẫn sau khi `flutter build apk --release` |
+| File | Đường dẫn sau `flutter build apk --release` |
 | --- | --- |
 | `app-release.apk` | `build/app/outputs/flutter-apk/app-release.apk` |
-| `harvestnhearth-b0.3.3.apk` | `build/app/outputs/flutter-apk/harvestnhearth-b0.3.3.apk` |
+| `harvestnhearth-b0.4.1.apk` | `build/app/outputs/flutter-apk/harvestnhearth-b0.4.1.apk` |
 
 ---
 
-## Gợi ý tag Git
+## Gợi ý tag
 
-- **Semver:** `v1.0.10` (khớp `versionName` Android).
-- **Nhãn sản phẩm:** `b0.3.3` (mục mới nhất trong `CHANGELOG.md`).
+- **Semver:** `v1.0.13`
+- **Nhãn:** `b0.4.1`

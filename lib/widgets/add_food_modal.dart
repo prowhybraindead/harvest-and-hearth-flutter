@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import '../core/simulated_clock.dart';
 import '../providers/app_provider.dart';
 import '../models/food_item.dart';
 import '../constants/categories.dart';
@@ -81,12 +82,13 @@ class _AddFoodModalState extends State<AddFoodModal> {
   }
 
   Future<void> _pickExpiryDate() async {
-    final initial = _expiryDate ?? DateTime.now().add(const Duration(days: 7));
+    final initial =
+        _expiryDate ?? SimulatedClock.now.add(const Duration(days: 7));
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+      firstDate: SimulatedClock.now.subtract(const Duration(days: 30)),
+      lastDate: SimulatedClock.now.add(const Duration(days: 365 * 3)),
     );
     if (picked != null) setState(() => _expiryDate = picked);
   }
@@ -118,7 +120,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
         storage: _storage,
         quantity: quantity,
         unit: _unitCtrl.text.trim(),
-        addedDate: DateTime.now(),
+        addedDate: SimulatedClock.now,
         expiryDate: _expiryDate,
         warningDays: warningDays,
       );

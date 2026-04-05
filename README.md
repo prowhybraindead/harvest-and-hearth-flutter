@@ -35,7 +35,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 | | |
 | --- | --- |
 | **Kho thực phẩm** | Tủ lạnh / Ngăn đông, tìm kiếm, sắp xếp, xem & chỉnh sửa. **Quét mã vạch / QR** bằng camera (đèn flash). |
-| **Cảnh báo hết hạn** | Gom mặt hàng hết hạn & sắp hết hạn trên trang chủ. |
+| **Cảnh báo hết hạn** | Gom mặt hàng hết hạn & sắp hết hạn trên trang chủ; **thông báo định kỳ** (Android ~9:00); **widget màn hình chính** (Android). |
 | **AI Chef** | Groq (Llama 3.3) gợi ý 3 công thức từ nguyên liệu trong tủ; fallback **Gemini** nếu Groq lỗi. |
 | **Khám phá** | Món Việt Nam (TheMealDB), tìm kiếm TheMealDB + DuckDuckGo, lưu công thức. |
 | **Dịch** | Dịch tên/mô tả công thức theo ngôn ngữ đang dùng. |
@@ -64,7 +64,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 
 | Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
 | --- | --- | --- |
-| **b0.3.3** | `1.0.10+11` | `1.0.10` · `11` |
+| **b0.4.1** | `1.0.13+14` | `1.0.13` · `14` |
 
 **b0.3.2:** template Revolvapp Clerk + backlog template — [CHANGELOG](CHANGELOG.md).
 
@@ -122,6 +122,7 @@ flutter run
 | **MongoDB Atlas** | `MONGODB_URI` trên server; Network Access cho IP Render (hoặc `0.0.0.0/0` khi thử — siết lại sau). |
 | **Google OAuth** (nếu dùng) | Client OAuth trên Google Cloud + redirect URI khớp Clerk; app: deep link `com.clerk.flutter://callback` trong allowlist mobile nếu cần. |
 | **Email Clerk** | Template Revolvapp trong `clerk/email-templates/` đã dán trên Dashboard (Invitation, Verification code, …). |
+| **Thông báo (Android)** | Lần đầu bật *Nhắc hạn* trong **Hồ sơ**, chấp nhận quyền thông báo (Android 13+). |
 
 Thiếu một mục (ví dụ secret sai instance, API down, Atlas chặn IP) thì đăng nhập có thể thành công nhưng tải kho / lỗi 401 khi gọi API.
 
@@ -150,7 +151,7 @@ flutter build apk --release
 | File | Mô tả |
 | --- | --- |
 | `app-release.apk` | Bản build mặc định của Flutter |
-| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.3.3.apk`) |
+| `harvestnhearth-<changelog>.apk` | Bản sao đặt tên theo **nhãn mới nhất** trong `CHANGELOG.md` (ví dụ `harvestnhearth-b0.4.1.apk`) |
 
 **Icon launcher:** đặt PNG vuông tại [`code/app_icon.png`](code/app_icon.png), sau đó:
 
@@ -196,10 +197,10 @@ render.yaml                      # Render Blueprint (tuỳ chọn) — deploy Do
 ## Backlog
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera
-- [ ] Thông báo nhắc nhở thực phẩm sắp hết hạn
+- [x] Thông báo nhắc nhở thực phẩm sắp hết hạn (local, 9:00)
 - [ ] Danh sách mua sắm tự động từ kho thiếu
 - [ ] Ảnh thực phẩm tuỳ chỉnh từ camera
-- [ ] Widget màn hình chính Android (cảnh báo)
+- [x] Widget màn hình chính Android (cảnh báo)
 - [ ] **Clerk:** Account locked, Password changed, Primary email changed, Reset password code, Sign in from new device — HTML có sẵn trong [`clerk/email-templates/`](clerk/email-templates/README.md); bật tính năng + dán template trên Dashboard (phiên bản sau).
 
 ---

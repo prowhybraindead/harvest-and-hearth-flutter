@@ -1,7 +1,7 @@
 name: harvest_and_hearth
 description: Ứng dụng quản lý thực phẩm thông minh với gợi ý công thức nấu ăn từ AI.
 publish_to: 'none'
-version: 1.0.10+11
+version: 1.0.13+14
 
 environment:
   sdk: '>=3.6.2 <4.0.0'
@@ -21,6 +21,10 @@ dependencies:
   mobile_scanner: ^7.2.0
   clerk_flutter: 0.0.14-beta
   clerk_auth: 0.0.14-beta
+  flutter_local_notifications: ^19.0.0
+  timezone: ^0.10.0
+  flutter_timezone: ^4.1.0
+  home_widget: ^0.7.0+1
 
 dev_dependencies:
   flutter_test:

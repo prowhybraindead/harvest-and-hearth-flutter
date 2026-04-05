@@ -110,11 +110,15 @@ class ProfileScreen extends StatelessWidget {
           Card(
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: Text(t('profile_notifications')),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {},
+                SwitchListTile(
+                  secondary: const Icon(Icons.notifications_active_outlined),
+                  title: Text(t('profile_expiry_reminders')),
+                  subtitle: Text(
+                    t('profile_expiry_reminders_sub'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  value: provider.expiryRemindersEnabled,
+                  onChanged: (v) => provider.setExpiryRemindersEnabled(v),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 ListTile(

@@ -1,5 +1,6 @@
 import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +12,9 @@ import 'screens/inventory_screen.dart';
 import 'screens/recipes_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/backend_api_service.dart';
+import 'services/expiry_reminder_service.dart';
 import 'widgets/add_food_modal.dart';
+import 'widgets/time_simulator_console.dart';
 
 /// Built once — avoids rebuilding [ColorScheme] / [ThemeData] on every [AppProvider] tick.
 final ThemeData kAppLightTheme = ThemeData(
@@ -66,6 +69,8 @@ Future<void> main() async {
   try {
     await dotenv.load(fileName: '.env');
   } catch (_) {}
+
+  await ExpiryReminderService.instance.init();
 
   final api = dotenv.env['API_BASE_URL'] ?? '';
   BackendApiService.instance.configure(baseUrl: api);
@@ -288,11 +293,24 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final lang = context.select<AppProvider, String>((p) => p.language);
     final t = context.read<AppProvider>().t;
+    final showTimeSim = kDebugMode || timeSimulatorEnabled();
 
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          IndexedStack(index: _currentIndex, children: _screens),
+          if (showTimeSim)
+            const Positioned(
+              left: 16,
+              bottom: 16,
+              child: TimeSimulatorFab(),
+            ),
+        ],
+      ),
       floatingActionButton: _currentIndex == 1
           ? FloatingActionButton(
+              heroTag: 'add_food_fab',
               onPressed: _showAddFoodModal,
               tooltip: t('add_food'),
               child: const Icon(Icons.add_rounded),

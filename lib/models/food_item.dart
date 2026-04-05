@@ -1,3 +1,5 @@
+import '../core/simulated_clock.dart';
+
 enum StorageType { fridge, freezer }
 
 enum FoodCategory {
@@ -114,7 +116,7 @@ class FoodItem {
   /// Returns days until expiry. Negative = already expired. Null = no expiry set.
   int? get daysUntilExpiry {
     if (expiryDate == null) return null;
-    final now = DateTime.now();
+    final now = SimulatedClock.now;
     final today = DateTime(now.year, now.month, now.day);
     final expiry = DateTime(expiryDate!.year, expiryDate!.month, expiryDate!.day);
     return expiry.difference(today).inDays;

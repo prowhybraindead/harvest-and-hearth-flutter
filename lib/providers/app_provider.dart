@@ -1,15 +1,19 @@
 import 'dart:async';
+
 import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/simulated_clock.dart';
 import '../models/food_item.dart';
 import '../models/recipe.dart';
 import '../models/user.dart';
 import '../constants/translations.dart';
 import '../services/backend_api_service.dart';
+import '../services/expiry_reminder_service.dart';
+import '../services/home_widget_service.dart';
 
 const _uuid = Uuid();
 
@@ -24,6 +28,7 @@ class AppProvider extends ChangeNotifier {
   bool _isInitialized = false;
   bool _isLoadingUser = false;
   String? _boundUserId;
+  bool _expiryRemindersEnabled = true;
 
   // ── Getters ────────────────────────────────────────────────────────────────
   AppUser? get user => _user;
@@ -35,6 +40,7 @@ class AppProvider extends ChangeNotifier {
   String get language => _language;
   bool get isDark => _isDark;
   bool get isInitialized => _isInitialized;
+  bool get expiryRemindersEnabled => _expiryRemindersEnabled;
 
   String t(String key) => Translations.get(key, _language);
 
@@ -43,8 +49,36 @@ class AppProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _language = prefs.getString('language') ?? 'VIE';
     _isDark = prefs.getBool('isDark') ?? false;
+    _expiryRemindersEnabled =
+        prefs.getBool(ExpiryReminderService.prefsKeyEnabled) ?? true;
     _isInitialized = true;
     notifyListeners();
+  }
+
+  Future<void> setExpiryRemindersEnabled(bool value) async {
+    _expiryRemindersEnabled = value;
+    notifyListeners();
+    await ExpiryReminderService.instance.setRemindersEnabled(value);
+    if (value) {
+      await ExpiryReminderService.instance.requestPostNotificationsPermissionIfNeeded();
+    }
+    await _syncExpiryRemindersAndWidget();
+  }
+
+  void _scheduleAlerts() {
+    unawaited(_syncExpiryRemindersAndWidget());
+  }
+
+  /// After changing [SimulatedClock] offset (time simulator).
+  void applySimulatedTime() {
+    notifyListeners();
+    _scheduleAlerts();
+  }
+
+  Future<void> _syncExpiryRemindersAndWidget() async {
+    await ExpiryReminderService.instance
+        .syncInventory(_inventory, language: _language);
+    await HomeWidgetService.instance.update(_inventory, _language);
   }
 
   /// Call after Clerk sign-in so API calls can use [sessionToken].
@@ -82,8 +116,15 @@ class AppProvider extends ChangeNotifier {
     _recipeCache = [];
     _boundUserId = null;
     _isLoadingUser = false;
+    SimulatedClock.reset();
     BackendApiService.instance.detach();
+    unawaited(_clearAlerts());
     notifyListeners();
+  }
+
+  Future<void> _clearAlerts() async {
+    await ExpiryReminderService.instance.cancelAll();
+    await HomeWidgetService.instance.clear();
   }
 
   AppUser _appUserFromClerk(clerk.User u) {
@@ -153,6 +194,7 @@ class AppProvider extends ChangeNotifier {
         .map((row) =>
             Recipe.fromJson(row['recipe_data'] as Map<String, dynamic>))
         .toList();
+    _scheduleAlerts();
   }
 
   // ── Auth (Clerk UI handles sign-in; only sign-out from app) ────────────────
@@ -172,6 +214,7 @@ class AppProvider extends ChangeNotifier {
         debugPrint('addFood: $e\n$st');
       }
     }
+    _scheduleAlerts();
   }
 
   Future<void> removeFood(String id) async {
@@ -183,6 +226,7 @@ class AppProvider extends ChangeNotifier {
     } catch (e, st) {
       debugPrint('removeFood: $e\n$st');
     }
+    _scheduleAlerts();
   }
 
   Future<void> updateFood(String id, FoodItem updated) async {
@@ -198,6 +242,7 @@ class AppProvider extends ChangeNotifier {
         }
       }
     }
+    _scheduleAlerts();
   }
 
   List<FoodItem> get fridgeItems =>
@@ -261,6 +306,7 @@ class AppProvider extends ChangeNotifier {
         debugPrint('setLanguage: $e\n$st');
       }
     }
+    _scheduleAlerts();
   }
 
   Future<void> toggleTheme() async {
@@ -276,11 +322,12 @@ class AppProvider extends ChangeNotifier {
         debugPrint('toggleTheme: $e\n$st');
       }
     }
+    _scheduleAlerts();
   }
 
   // ── Default data ───────────────────────────────────────────────────────────
   List<FoodItem> _defaultInventory() {
-    final now = DateTime.now();
+    final now = SimulatedClock.now;
     return [
       FoodItem(
         id: _uuid.v4(),

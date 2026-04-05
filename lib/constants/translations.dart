@@ -152,6 +152,25 @@ class Translations {
     'profile_logout_confirm': 'Bạn có chắc muốn đăng xuất?',
     'profile_settings': 'Cài đặt',
     'profile_preferences': 'Tùy chọn',
+    'profile_expiry_reminders': 'Nhắc hạn & widget màn hình chính',
+    'profile_expiry_reminders_sub':
+        'Thông báo tóm tắt mỗi sáng 9:00; widget hiển thị số món sắp hết / hết hạn.',
+
+    // Notifications / widget
+    'expiry_notif_title': 'Harvest & Hearth · Kho nhà',
+    'expiry_notif_body': 'Hết hạn: {expired} · Sắp hết: {expiring}',
+    'time_simulator_tooltip': 'Mô phỏng thời gian (test thông báo)',
+    'time_simulator_title': 'Console thời gian (QA)',
+    'time_simulator_p1': '+1 ngày',
+    'time_simulator_p3': '+3 ngày',
+    'time_simulator_p7': '+7 ngày',
+    'time_simulator_reset': 'Về giờ thực',
+    'time_simulator_test_notif': 'Gửi thông báo thử ngay',
+    'time_simulator_test_sent': 'Đã gửi thông báo thử.',
+    'time_simulator_hint':
+        'Cộng dồn vào offset mô phỏng; danh sách hết hạn và widget cập nhật theo “hôm nay” giả lập. Ngày lưu trong kho không đổi.',
+    'widget_line1': 'Sắp hết: {expiring} · Hết hạn: {expired}',
+    'widget_all_ok': 'Không có cảnh báo',
 
     // Food detail / edit
     'food_edit_title': 'Chỉnh sửa thực phẩm',
@@ -321,6 +340,25 @@ class Translations {
     'profile_logout_confirm': 'Are you sure you want to logout?',
     'profile_settings': 'Settings',
     'profile_preferences': 'Preferences',
+    'profile_expiry_reminders': 'Expiry reminders & home widget',
+    'profile_expiry_reminders_sub':
+        'Daily summary at 9:00; widget shows expiring and expired counts.',
+
+    // Notifications / widget
+    'expiry_notif_title': 'Harvest & Hearth · Pantry',
+    'expiry_notif_body': 'Expired: {expired} · Expiring soon: {expiring}',
+    'time_simulator_tooltip': 'Time simulator (test notifications)',
+    'time_simulator_title': 'Time console (QA)',
+    'time_simulator_p1': '+1 day',
+    'time_simulator_p3': '+3 days',
+    'time_simulator_p7': '+7 days',
+    'time_simulator_reset': 'Reset to real time',
+    'time_simulator_test_notif': 'Send test notification now',
+    'time_simulator_test_sent': 'Test notification sent.',
+    'time_simulator_hint':
+        'Offsets stack; expiry lists and widget use the simulated “today”. Stored dates are unchanged.',
+    'widget_line1': 'Expiring: {expiring} · Expired: {expired}',
+    'widget_all_ok': 'No alerts',
 
     // Food detail / edit
     'food_edit_title': 'Edit Food',
