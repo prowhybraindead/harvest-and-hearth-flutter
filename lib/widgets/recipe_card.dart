@@ -98,9 +98,10 @@ class RecipeCard extends StatelessWidget {
                   ),
                   _MetaChip(
                     icon: Icons.local_fire_department_outlined,
-                    label: '${recipe.calories} kcal',
+                    label: '${recipe.calories} ${t('recipes_kcal')}',
                   ),
-                  _DifficultyChip(difficulty: recipe.difficulty),
+                  _DifficultyChip(
+                      difficulty: recipe.difficulty, t: provider.t),
                 ],
               ),
             ],
@@ -111,7 +112,6 @@ class RecipeCard extends StatelessWidget {
   }
 
   void _showDetail(BuildContext context) {
-    final t = provider.t;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -163,7 +163,9 @@ class _MetaChip extends StatelessWidget {
 
 class _DifficultyChip extends StatelessWidget {
   final RecipeDifficulty difficulty;
-  const _DifficultyChip({required this.difficulty});
+  final String Function(String) t;
+
+  const _DifficultyChip({required this.difficulty, required this.t});
 
   @override
   Widget build(BuildContext context) {
@@ -176,6 +178,11 @@ class _DifficultyChip extends StatelessWidget {
       case RecipeDifficulty.hard:
         color = Colors.red;
     }
+    final label = switch (difficulty) {
+      RecipeDifficulty.easy => t('recipes_difficulty_easy'),
+      RecipeDifficulty.medium => t('recipes_difficulty_medium'),
+      RecipeDifficulty.hard => t('recipes_difficulty_hard'),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -183,7 +190,7 @@ class _DifficultyChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        difficulty.label,
+        label,
         style: TextStyle(
             fontSize: 11, color: color, fontWeight: FontWeight.bold),
       ),
@@ -259,7 +266,7 @@ class _RecipeDetailSheet extends StatelessWidget {
             _DetailStat(
                 label: t('recipes_calories'),
                 value: '${recipe.calories}',
-                unit: 'kcal',
+                unit: t('recipes_kcal'),
                 icon: Icons.bolt_rounded),
           ],
         ),

@@ -70,12 +70,17 @@ class Translations {
     'food_unit': 'Đơn vị',
     'food_expiry': 'Ngày hết hạn (tuỳ chọn)',
     'food_warning_days': 'Cảnh báo trước (ngày)',
-    'food_barcode': 'Quét mã vạch',
+    'food_barcode': 'Quét mã vạch / QR',
     'food_save': 'Lưu',
     'food_cancel': 'Hủy',
     'food_name_required': 'Tên thực phẩm không được để trống',
-    'food_scanning': 'Đang quét...',
-    'food_scan_done': 'Đã tìm thấy: Sản phẩm mẫu',
+    'food_scan_title': 'Quét mã vạch / QR',
+    'food_scan_hint':
+        'Đưa mã vào khung hình. Hỗ trợ mã vạch sản phẩm và mã QR.',
+    'food_scan_permission_denied':
+        'Không thể dùng camera. Vui lòng cấp quyền trong Cài đặt.',
+    'food_scan_success': 'Đã điền mã quét vào ô tên.',
+    'food_scan_torch': 'Đèn flash',
 
     // Categories
     'cat_vegetables': 'Rau củ',
@@ -106,6 +111,10 @@ class Translations {
     'recipes_save': 'Lưu công thức',
     'recipes_unsave': 'Bỏ lưu',
     'recipes_difficulty': 'Độ khó',
+    'recipes_difficulty_easy': 'Dễ',
+    'recipes_difficulty_medium': 'Trung bình',
+    'recipes_difficulty_hard': 'Khó',
+    'recipes_kcal': 'kcal',
     'recipes_prep': 'Chuẩn bị',
     'recipes_cook': 'Nấu',
     'recipes_servings': 'Khẩu phần',
@@ -230,12 +239,17 @@ class Translations {
     'food_unit': 'Unit',
     'food_expiry': 'Expiry date (optional)',
     'food_warning_days': 'Warn before (days)',
-    'food_barcode': 'Scan barcode',
+    'food_barcode': 'Scan barcode / QR',
     'food_save': 'Save',
     'food_cancel': 'Cancel',
     'food_name_required': 'Food name is required',
-    'food_scanning': 'Scanning...',
-    'food_scan_done': 'Found: Sample Product',
+    'food_scan_title': 'Scan barcode / QR',
+    'food_scan_hint':
+        'Align the code in the frame. Supports product barcodes and QR codes.',
+    'food_scan_permission_denied':
+        'Camera unavailable. Please grant permission in Settings.',
+    'food_scan_success': 'Scanned code filled in the name field.',
+    'food_scan_torch': 'Flashlight',
 
     // Categories
     'cat_vegetables': 'Vegetables',
@@ -266,6 +280,10 @@ class Translations {
     'recipes_save': 'Save recipe',
     'recipes_unsave': 'Unsave',
     'recipes_difficulty': 'Difficulty',
+    'recipes_difficulty_easy': 'Easy',
+    'recipes_difficulty_medium': 'Medium',
+    'recipes_difficulty_hard': 'Hard',
+    'recipes_kcal': 'kcal',
     'recipes_prep': 'Prep',
     'recipes_cook': 'Cook',
     'recipes_servings': 'Servings',

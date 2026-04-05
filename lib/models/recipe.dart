@@ -2,16 +2,6 @@ enum RecipeDifficulty { easy, medium, hard }
 
 extension RecipeDifficultyX on RecipeDifficulty {
   String get value => name;
-  String get label {
-    switch (this) {
-      case RecipeDifficulty.easy:
-        return 'Dễ';
-      case RecipeDifficulty.medium:
-        return 'Trung bình';
-      case RecipeDifficulty.hard:
-        return 'Khó';
-    }
-  }
 
   static RecipeDifficulty fromString(String v) {
     switch (v.toLowerCase()) {

@@ -555,6 +555,9 @@ class _MealSummaryCardState extends State<_MealSummaryCard> {
               child: Image.network(
                 widget.summary.thumbnailUrl,
                 fit: BoxFit.cover,
+                // Decode at ~2× thumbnail size to save memory & CPU on list scroll.
+                cacheWidth: 200,
+                cacheHeight: 200,
                 errorBuilder: (_, __, ___) => Container(
                   color: cs.primaryContainer,
                   child: Icon(Icons.restaurant_rounded,
@@ -685,6 +688,8 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
               height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
+              cacheWidth: 1200,
+              cacheHeight: 600,
               errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),

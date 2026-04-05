@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'models/user.dart';
 import 'providers/app_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -10,6 +11,53 @@ import 'screens/inventory_screen.dart';
 import 'screens/recipes_screen.dart';
 import 'screens/profile_screen.dart';
 import 'widgets/add_food_modal.dart';
+
+/// Built once — avoids rebuilding [ColorScheme] / [ThemeData] on every [AppProvider] tick.
+final ThemeData kAppLightTheme = ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: const Color(0xFF2E7D32),
+    brightness: Brightness.light,
+    secondary: const Color(0xFFFF9800),
+  ),
+  scaffoldBackgroundColor: const Color(0xFFF8FAF9),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xFFF8FAF9),
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+  ),
+  cardTheme: CardThemeData(
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: const BorderSide(color: Color(0xFFE0E7E2)),
+    ),
+    color: Colors.white,
+  ),
+);
+
+final ThemeData kAppDarkTheme = ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: const Color(0xFF176A21),
+    brightness: Brightness.dark,
+    secondary: const Color(0xFFFFB74D),
+  ),
+  scaffoldBackgroundColor: const Color(0xFF050C07),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xFF050C07),
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+  ),
+  cardTheme: CardThemeData(
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: const BorderSide(color: Color(0xFF1A3320)),
+    ),
+    color: const Color(0xFF0D1F11),
+  ),
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,74 +90,61 @@ Future<void> main() async {
   );
 }
 
+/// Only theme + routing inputs — avoids rebuilding [MaterialApp] when inventory/recipes change.
+@immutable
+class _AppUiState {
+  const _AppUiState({
+    required this.isDark,
+    required this.isInitialized,
+    required this.isLoadingUser,
+    required this.user,
+  });
+
+  final bool isDark;
+  final bool isInitialized;
+  final bool isLoadingUser;
+  final AppUser? user;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _AppUiState &&
+          runtimeType == other.runtimeType &&
+          isDark == other.isDark &&
+          isInitialized == other.isInitialized &&
+          isLoadingUser == other.isLoadingUser &&
+          user == other.user;
+
+  @override
+  int get hashCode => Object.hash(isDark, isInitialized, isLoadingUser, user);
+}
+
 class HarvestAndHearthApp extends StatelessWidget {
   const HarvestAndHearthApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<AppProvider>();
-    return MaterialApp(
-      title: 'Harvest & Hearth',
-      debugShowCheckedModeBanner: false,
-      themeMode: provider.isDark ? ThemeMode.dark : ThemeMode.light,
-      theme: _buildLightTheme(),
-      darkTheme: _buildDarkTheme(),
-      home: !provider.isInitialized || provider.isLoadingUser
-          ? const _SplashScreen()
-          : (provider.user == null ? const AuthScreen() : const MainShell()),
-    );
-  }
-
-  ThemeData _buildLightTheme() {
-    const primary = Color(0xFF2E7D32);
-    const secondary = Color(0xFFFF9800);
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primary,
-        brightness: Brightness.light,
-        secondary: secondary,
+    return Selector<AppProvider, _AppUiState>(
+      selector: (_, p) => _AppUiState(
+        isDark: p.isDark,
+        isInitialized: p.isInitialized,
+        isLoadingUser: p.isLoadingUser,
+        user: p.user,
       ),
-      scaffoldBackgroundColor: const Color(0xFFF8FAF9),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFFF8FAF9),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-      ),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFE0E7E2)),
-        ),
-        color: Colors.white,
-      ),
-    );
-  }
-
-  ThemeData _buildDarkTheme() {
-    const primary = Color(0xFF176A21);
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primary,
-        brightness: Brightness.dark,
-        secondary: const Color(0xFFFFB74D),
-      ),
-      scaffoldBackgroundColor: const Color(0xFF050C07),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF050C07),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-      ),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFF1A3320)),
-        ),
-        color: const Color(0xFF0D1F11),
-      ),
+      builder: (context, state, _) {
+        return MaterialApp(
+          title: 'Harvest & Hearth',
+          debugShowCheckedModeBanner: false,
+          themeMode: state.isDark ? ThemeMode.dark : ThemeMode.light,
+          theme: kAppLightTheme,
+          darkTheme: kAppDarkTheme,
+          home: !state.isInitialized || state.isLoadingUser
+              ? const _SplashScreen()
+              : (state.user == null
+                  ? const AuthScreen()
+                  : const MainShell()),
+        );
+      },
     );
   }
 }
@@ -177,7 +212,10 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final t = context.watch<AppProvider>().t;
+    // Rebuild shell chrome only when language changes (not on every inventory/recipe tick).
+    final lang = context.select<AppProvider, String>((p) => p.language);
+    final t = context.read<AppProvider>().t;
+
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       floatingActionButton: _currentIndex == 1
@@ -188,6 +226,7 @@ class _MainShellState extends State<MainShell> {
             )
           : null,
       bottomNavigationBar: NavigationBar(
+        key: ValueKey<String>(lang),
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: [

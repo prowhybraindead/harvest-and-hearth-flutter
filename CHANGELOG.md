@@ -75,9 +75,42 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.1.6] — 2026-04-05
+
+- **Độ khó công thức theo ngôn ngữ**: Nhãn Dễ / Trung bình / Khó (hoặc Easy / Medium / Hard) trên chip độ khó và đơn vị năng lượng hiển thị đúng bản dịch đang chọn.
+- **Kiểm thử & phân tích**: Bộ test mặc định kiểm tra bản dịch thay cho màn hình counter mẫu; `flutter analyze` sạch lỗi/cảnh báo liên quan các thay đổi này.
+- **Tài liệu quy ước**: Cập nhật `RULES.md` cho khớp thực tế codebase (đã hoàn thành trước bản này).
+
+---
+
+## [b0.1.7] — 2026-04-05
+
+- **Quét mã vạch & QR bằng camera**: Khi thêm thực phẩm, mở màn hình quét thật (hỗ trợ nhiều định dạng mã vạch và QR). Giá trị quét được điền vào ô tên; có nút đèn flash và hướng dẫn trên màn hình. Thay thế hoàn toàn chế độ giả lập trước đây.
+
+---
+
+## [b0.1.8] — 2026-04-05
+
+### Hiệu năng
+
+- **MaterialApp & theme**: Chỉ rebuild khi đổi theme / splash / auth / shell (không rebuild khi chỉ cập nhật kho hoặc công thức). Theme sáng/tối dùng instance tĩnh, tránh tạo lại `ThemeData` không cần thiết.
+- **Thanh điều hướng**: `MainShell` chỉ rebuild nhãn tab khi đổi ngôn ngữ, không khi dữ liệu kho hay cache công thức thay đổi.
+- **Ảnh công thức (TheMealDB)**: `Image.network` dùng `cacheWidth` / `cacheHeight` để giảm bộ nhớ decode khi cuộn danh sách và xem chi tiết.
+
+### Tài liệu
+
+- **README**: Bố cục lại cho dễ đọc (badge, mục lục, bảng phiên bản, hướng dẫn build release).
+- **GitHub Release**: Thêm file `GITHUB_RELEASE.md` — nội dung gợi ý để dán khi tạo release.
+
+### Build (Android)
+
+- **`android/gradle.properties`**: `kotlin.incremental=false` để tránh lỗi biên dịch Kotlin khi thư mục project và pub-cache nằm khác ổ đĩa (Windows).
+
+---
+
 ## Sắp ra mắt (Backlog)
 
-- [ ] Quét mã vạch thực sự bằng camera (thay thế giả lập hiện tại).
+- [x] Quét mã vạch và mã QR thực sự bằng camera.
 - [ ] Thông báo nhắc nhở khi thực phẩm sắp hết hạn.
 - [ ] Danh sách mua sắm tự động từ kho thiếu.
 - [x] Đồng bộ dữ liệu qua Supabase. ✓ Hoàn thành ở v1.2.0

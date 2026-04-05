@@ -5,6 +5,7 @@ import '../providers/app_provider.dart';
 import '../models/food_item.dart';
 import '../constants/categories.dart';
 import '../utils/date_helper.dart';
+import '../screens/barcode_scanner_screen.dart';
 
 const _uuid = Uuid();
 
@@ -30,7 +31,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
   late FoodCategory _category;
   late StorageType _storage;
   DateTime? _expiryDate;
-  bool _isScanning = false;
 
   @override
   void initState() {
@@ -63,14 +63,20 @@ class _AddFoodModalState extends State<AddFoodModal> {
     super.dispose();
   }
 
-  Future<void> _simulateScan() async {
-    setState(() => _isScanning = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() {
-        _isScanning = false;
-        _nameCtrl.text = 'Sản phẩm mẫu';
-      });
+  Future<void> _openScanner() async {
+    final t = context.read<AppProvider>().t;
+    final code = await Navigator.of(context, rootNavigator: true).push<String>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => BarcodeScannerScreen(t: t),
+      ),
+    );
+    if (!mounted) return;
+    if (code != null && code.isNotEmpty) {
+      setState(() => _nameCtrl.text = code);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('food_scan_success'))),
+      );
     }
   }
 
@@ -166,17 +172,9 @@ class _AddFoodModalState extends State<AddFoodModal> {
                 // Barcode scan button (add mode only)
                 if (!widget._isEdit) ...[
                   OutlinedButton.icon(
-                    onPressed: _isScanning ? null : _simulateScan,
-                    icon: _isScanning
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.qr_code_scanner_rounded),
-                    label: Text(_isScanning
-                        ? t('food_scanning')
-                        : t('food_barcode')),
+                    onPressed: _openScanner,
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    label: Text(t('food_barcode')),
                   ),
                   const SizedBox(height: 16),
                 ],

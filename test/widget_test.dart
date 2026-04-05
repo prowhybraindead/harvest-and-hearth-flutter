@@ -1,30 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:harvest_and_hearth/main.dart';
+import 'package:harvest_and_hearth/constants/translations.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('Translations VIE returns expected recipe title', () {
+    expect(Translations.get('recipes_title', 'VIE'), 'Công thức nấu ăn');
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('Translations ENG returns expected recipe title', () {
+    expect(Translations.get('recipes_title', 'ENG'), 'Recipes');
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('Difficulty keys differ by language', () {
+    expect(Translations.get('recipes_difficulty_easy', 'VIE'), 'Dễ');
+    expect(Translations.get('recipes_difficulty_easy', 'ENG'), 'Easy');
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('Barcode scanner screen title keys exist', () {
+    expect(Translations.get('food_scan_title', 'VIE'), contains('QR'));
+    expect(Translations.get('food_scan_hint', 'ENG'), isNotEmpty);
   });
 }

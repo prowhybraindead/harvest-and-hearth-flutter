@@ -1,49 +1,78 @@
+<div align="center">
+
 # Harvest & Hearth
 
-Ứng dụng Android quản lý thực phẩm thông minh — theo dõi hạn sử dụng, nhận gợi ý công thức nấu ăn từ AI, đồng bộ dữ liệu qua đám mây.
+**Ứng dụng Android quản lý thực phẩm thông minh** — theo dõi hạn sử dụng, gợi ý công thức từ AI, đồng bộ dữ liệu qua đám mây.  
+Song ngữ **Việt – Anh**, giao diện **Material 3**.
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.3+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.3+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
+[![Platform](https://img.shields.io/badge/Android-API_24+-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
+[![Supabase](https://img.shields.io/badge/Backend-Supabase-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com)
+
+</div>
 
 ---
 
+## Mục lục
+
+- [Tính năng](#features)
+- [Tech stack](#tech-stack)
+- [Phiên bản](#versioning)
+- [Cài đặt nhanh](#quick-start)
+- [Build bản phát hành (APK)](#build-release)
+- [Cấu trúc dự án](#project-layout)
+- [Kiến trúc](#architecture)
+- [Backlog](#backlog)
+- [Changelog](#changelog)
+
+---
+
+<a id="features"></a>
 ## Tính năng
 
-| Tính năng | Mô tả |
-|-----------|-------|
-| **Kho thực phẩm** | Quản lý theo Tủ lạnh / Ngăn đông. Tìm kiếm, sắp xếp theo tên / hạn sử dụng / ngày thêm. Xem chi tiết và chỉnh sửa trực tiếp. |
-| **Cảnh báo hết hạn** | Tự động phát hiện thực phẩm đã hết hạn hoặc sắp hết hạn, hiển thị trên trang chủ. |
-| **AI Chef** | Groq AI (Llama 3.3) tự động gợi ý 3 công thức từ nguyên liệu hiện có, ưu tiên đồ sắp hết hạn. Nếu Groq không phản hồi, tự động chuyển sang Gemini. |
-| **Khám phá công thức** | Duyệt món ăn Việt Nam từ TheMealDB. Tìm kiếm bất kỳ tên món — kết quả từ TheMealDB và DuckDuckGo đồng thời. |
-| **Dịch tức thì** | Dịch tên và mô tả công thức sang tiếng Việt hoặc tiếng Anh ngay trong app. |
-| **Đồng bộ đám mây** | Dữ liệu thực phẩm và công thức đã lưu được lưu trên Supabase — đăng nhập từ thiết bị khác vẫn đầy đủ. |
-| **Google OAuth** | Đăng nhập bằng tài khoản Google, không cần nhớ mật khẩu. |
-| **Đa ngôn ngữ** | Tiếng Việt và tiếng Anh, chuyển đổi tức thì trong Hồ sơ. |
-| **Chế độ tối** | Theo Material 3, lưu lại lựa chọn sau khi tắt app. |
+| | |
+| --- | --- |
+| **Kho thực phẩm** | Tủ lạnh / Ngăn đông, tìm kiếm, sắp xếp, xem & chỉnh sửa. **Quét mã vạch / QR** bằng camera (đèn flash). |
+| **Cảnh báo hết hạn** | Gom mặt hàng hết hạn & sắp hết hạn trên trang chủ. |
+| **AI Chef** | Groq (Llama 3.3) gợi ý 3 công thức từ nguyên liệu trong tủ; fallback **Gemini** nếu Groq lỗi. |
+| **Khám phá** | Món Việt Nam (TheMealDB), tìm kiếm TheMealDB + DuckDuckGo, lưu công thức. |
+| **Dịch** | Dịch tên/mô tả công thức theo ngôn ngữ đang dùng. |
+| **Đám mây** | Supabase — đăng nhập thiết bị khác vẫn đồng bộ kho & công thức đã lưu. |
+| **Đăng nhập** | Email/mật khẩu, Google OAuth, tài khoản thử (theo hướng dẫn setup). |
+| **Cài đặt** | Sáng / tối, Việt / Anh — lưu cục bộ. |
 
 ---
 
-## Tech Stack
+<a id="tech-stack"></a>
+## Tech stack
 
-| Thành phần | Công nghệ |
-|-----------|-----------|
-| Framework | Flutter (Android, min SDK 24) |
-| State management | Provider (ChangeNotifier) |
-| Backend / Auth | Supabase (PostgreSQL + RLS) |
-| AI chính | Groq — `llama-3.3-70b-versatile` |
-| AI dự phòng | Google Gemini — `gemini-2.0-flash` |
-| Công thức online | TheMealDB API, DuckDuckGo |
-| Dịch thuật | Google Translate (unofficial) |
+| Lớp | Công nghệ |
+| --- | --- |
+| UI | Flutter · Material 3 · **Provider** (ChangeNotifier) |
+| Backend | **Supabase** (Auth, PostgreSQL, RLS) |
+| AI | **Groq** `llama-3.3-70b-versatile` → **Gemini** `gemini-2.0-flash` |
+| Công thức ngoài | TheMealDB, DuckDuckGo |
+| Dịch | Google Translate (unofficial) |
+| Quét mã | **mobile_scanner** (barcode + QR) |
 
 ---
 
-## Cài đặt & Setup
+<a id="versioning"></a>
+## Phiên bản
 
-### Yêu cầu
+| Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
+| --- | --- | --- |
+| **b0.1.8** | `1.0.5+6` | `1.0.5` · `6` |
 
-- Flutter SDK `>=3.3.0`
-- Android SDK 24+ (target SDK 36)
-- Tài khoản [Supabase](https://supabase.com)
-- API key: Groq và Gemini
+Chi tiết từng bản: [**CHANGELOG.md**](CHANGELOG.md).
 
-### 1 — Clone và cài dependencies
+---
+
+<a id="quick-start"></a>
+## Cài đặt nhanh
+
+**Yêu cầu:** Flutter SDK `>=3.3.0`, Android SDK **24+** (target **36**), tài khoản [Supabase](https://supabase.com), API key **Groq** & **Gemini**.
 
 ```bash
 git clone <repo-url>
@@ -51,41 +80,16 @@ cd harvest-and-hearth-flutter
 flutter pub get
 ```
 
-### 2 — Tạo file `.env`
+Tạo `.env` từ `.env.example` và điền:
 
-Sao chép `.env.example` thành `.env` và điền đầy đủ:
-
-```
+```env
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_ANON_KEY=<anon-key>
 GROQ_API_KEY=<groq-key>
 GEMINI_API_KEY=<gemini-key>
 ```
 
-### 3 — Tạo database trên Supabase
-
-Mở **Supabase Dashboard → SQL Editor** và chạy toàn bộ nội dung file `supabase/supabase.sql`. File này tạo các bảng `profiles`, `food_items`, `saved_recipes` cùng Row Level Security.
-
-### 4 — Cài đặt Google OAuth (tuỳ chọn)
-
-1. Google Cloud Console → tạo **Android OAuth Client** (SHA-1 debug + package `com.harvestandhearth.app`).
-2. Google Cloud Console → tạo **Web OAuth Client** (Redirect URI = `https://<project-ref>.supabase.co/auth/v1/callback`).
-3. Supabase Dashboard → **Authentication → Providers → Google** → điền Web Client ID + Secret.
-4. Supabase Dashboard → **Authentication → URL Configuration** → thêm `io.supabase.harvestandhearth://login-callback/` vào Redirect URLs.
-
-### 5 — Tạo tài khoản test (tuỳ chọn)
-
-Vào Supabase Dashboard → Authentication → Users → Add User:
-- Email: `test@harvestandhearth.app`
-- Password: `testPassword123!`
-
-### 6 — Cài đặt email templates (tuỳ chọn)
-
-Supabase Dashboard → Authentication → Email Templates:
-- **Confirm signup**: dán nội dung `supabase/email-templates/confirm-signup.html`
-- **Reauthentication**: dán nội dung `supabase/email-templates/reauthentication.html`
-
-### 7 — Chạy ứng dụng
+Chạy SQL `supabase/supabase.sql` trong Supabase SQL Editor. Tuỳ chọn: Google OAuth (Android + Web client), redirect `io.supabase.harvestandhearth://login-callback/`, email templates trong `supabase/email-templates/`.
 
 ```bash
 flutter run
@@ -93,84 +97,68 @@ flutter run
 
 ---
 
+<a id="build-release"></a>
+## Build bản phát hành (APK)
+
+```bash
+flutter build apk --release
+```
+
+File đầu ra mặc định:
+
+`build/app/outputs/flutter-apk/app-release.apk`
+
+*(Tuỳ chọn Play Store: `flutter build appbundle --release` → `build/app/outputs/bundle/release/app-release.aab`.)*
+
+---
+
+<a id="project-layout"></a>
 ## Cấu trúc dự án
 
 ```
 lib/
-├── main.dart                    # Entry point, MaterialApp, MainShell (IndexedStack nav)
+├── main.dart                    # App + theme tĩnh + Selector routing + MainShell
 ├── models/
-│   ├── food_item.dart           # FoodItem, FoodCategory, StorageType
-│   ├── recipe.dart              # Recipe, RecipeDifficulty
-│   └── user.dart                # AppUser
-├── providers/
-│   └── app_provider.dart        # ChangeNotifier — toàn bộ app state
-├── constants/
-│   ├── translations.dart        # Bản dịch VIE/ENG (static map)
-│   └── categories.dart          # AppCategories — icon, màu, translation key
-├── services/
-│   ├── supabase_service.dart    # Auth, profile, CRUD food & recipes
-│   ├── ai_service.dart          # Facade: Groq → Gemini fallback
-│   ├── groq_service.dart        # Groq API (primary AI)
-│   ├── gemini_service.dart      # Google Gemini (fallback AI)
-│   ├── translate_service.dart   # Google Translate (unofficial)
-│   └── recipe_search_service.dart # TheMealDB + DuckDuckGo
+├── providers/                   # AppProvider
+├── constants/                   # translations, categories
+├── services/                    # Supabase, AI, search, translate
 ├── utils/
-│   └── date_helper.dart         # format(), relativeLabel()
-├── screens/
-│   ├── auth_screen.dart         # Login / Register / Google OAuth
-│   ├── dashboard_screen.dart    # Trang chủ: banner, cảnh báo, gần đây, tip
-│   ├── inventory_screen.dart    # Kho: Tủ lạnh / Ngăn đông, tìm kiếm, sắp xếp
-│   ├── recipes_screen.dart      # AI Chef / Khám phá / Đã lưu
-│   └── profile_screen.dart      # Hồ sơ: ngôn ngữ, theme, thống kê, đăng xuất
-└── widgets/
-    ├── add_food_modal.dart       # Bottom sheet thêm / chỉnh sửa thực phẩm
-    ├── food_item_card.dart       # Card thực phẩm với category chip + expiry label
-    └── recipe_card.dart         # Card công thức + detail sheet
+├── screens/                     # auth, dashboard, inventory, recipes, profile, barcode_scanner
+└── widgets/                     # add_food_modal, cards, …
 ```
 
 ---
 
+<a id="architecture"></a>
 ## Kiến trúc
 
-### Startup flow
-
-```
-main() → Supabase.initialize() → runApp()
-  └─ AppProvider.init()
-       ├─ đọc SharedPreferences (language, isDark) — instant
-       ├─ set _isInitialized = true → splash biến mất
-       ├─ nếu có session → giữ splash (_isLoadingUser = true)
-       │    └─ Future.wait([getProfile, getFoodItems, getSavedRecipes])
-       │         └─ xong → vào MainShell
-       └─ subscribe onAuthStateChange
-```
-
-### Navigation
-
-`IndexedStack` + `NavigationBar` — giữ state tất cả tabs khi chuyển. FAB chỉ hiện ở tab Inventory.
-
-### AI fallback
-
-```
-AiService.generateRecipes()
-  ├─ try: GroqService (llama-3.3-70b-versatile) — nhanh
-  └─ catch: GeminiService (gemini-2.0-flash) — dự phòng
-```
+- **Khởi động:** `Supabase.initialize` → `AppProvider.init()` (prefs → session → tải profile/kho/công thức).
+- **Điều hướng:** `IndexedStack` + `NavigationBar` — giữ state từng tab; FAB chỉ tab Kho.
+- **AI:** `AiService` → thử Groq, lỗi thì Gemini.
+- **Hiệu năng (b0.1.8):** `MaterialApp` không rebuild khi chỉ đổi dữ liệu kho/công thức; theme dùng instance tĩnh; ảnh TheMealDB decode có giới hạn kích thước cache.
 
 ---
 
-## Phiên bản
-
-Xem [CHANGELOG.md](CHANGELOG.md) để biết lịch sử thay đổi.
-
-Phiên bản hiện tại: **b0.1.5**
-
----
-
+<a id="backlog"></a>
 ## Backlog
 
-- [ ] Quét mã vạch thực sự bằng camera
+- [x] Quét mã vạch và mã QR thực sự bằng camera
 - [ ] Thông báo nhắc nhở thực phẩm sắp hết hạn
 - [ ] Danh sách mua sắm tự động từ kho thiếu
 - [ ] Ảnh thực phẩm tuỳ chỉnh từ camera
-- [ ] Widget màn hình chính Android hiển thị cảnh báo
+- [ ] Widget màn hình chính Android (cảnh báo)
+
+---
+
+<a id="changelog"></a>
+## Changelog
+
+Xem đầy đủ: [**CHANGELOG.md**](CHANGELOG.md).
+
+---
+
+<div align="center">
+
+**Harvest & Hearth** · Quản lý tủ lạnh thông minh
+
+</div>
