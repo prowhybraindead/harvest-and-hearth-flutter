@@ -8,6 +8,7 @@ RULES.md
 *.pem
 *.p12
 *.keystore
+.env.pterodactyl
 google-services.json
 GoogleService-Info.plist
 

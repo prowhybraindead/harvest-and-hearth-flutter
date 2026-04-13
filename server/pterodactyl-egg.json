@@ -1,0 +1,29 @@
+{
+  "_comment": "Pterodactyl Egg configuration cho Harvest & Hearth API Node.js - sử dụng file .env",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "name": "Harvest & Hearth API (Node.js + .env)",
+    "description": "Node.js REST API cho Harvest & Hearth app với MongoDB + Clerk Auth. Sử dụng file .env cho cấu hình.",
+    "features": null,
+    "docker_images": {
+      "nodejs_20": "ghcr.io/parkervcp/yolks:nodejs_20"
+    },
+    "file_denylist": [".env"],
+    "startup": "npm install && node src/index.js",
+    "config": {
+      "files": "{\r\n    \"package.json\": {\r\n        \"parser\": \"json\",\r\n        \"find\": {\r\n            \"start\": \"node src/index.js\"\r\n        }\r\n    }\r\n}",
+      "startup": "{\r\n    \"done\": \"API listening on\"\r\n}",
+      "logs": "{}",
+      "stop": "^C"
+    },
+  "scripts": {
+    "installation": {
+      "script": "#!\/bin\/bash\r\napt-get update -y\r\napt-get install -y curl git\r\n\r\nif [ ! -d \"/home/container\" ]; then\r\n    mkdir \/home\/container\r\nfi\r\n\r\ncd \/home\/container\r\n\r\n# Tạo file .env từ .env.example nếu chưa có\r\nif [ ! -f \".env\" ] && [ -f \".env.example\" ]; then\r\n    cp .env.example .env\r\n    echo \".env file created from .env.example\"\r\nelif [ ! -f \".env\" ]; then\r\n    echo \"Creating .env file...\"\r\n    cat > .env << 'EOF'\r\nPORT=25165\r\nSERVER_PORT=25165\r\nNODE_ENV=production\r\nMONGODB_URI=mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/harvest_hearth?retryWrites=true&w=majority\r\nCLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\nEOF\r\nfi\r\n\r\necho \"Installing dependencies...\"\r\nnpm install\r\n\r\necho \"Installation complete!\"\r\necho \"\"\r\necho \"IMPORTANT: Edit .env file with your actual values before starting the server!\"\r\necho \"\"\r\necho \"Required values in .env:\"\r\necho \"  - PORT (default: 25165)\"\r\necho \"  - SERVER_PORT (default: 25165)\"\r\necho \"  - NODE_ENV (default: production)\"\r\necho \"  - MONGODB_URI (MongoDB Atlas connection string)\"\r\necho \"  - CLERK_SECRET_KEY (Clerk Secret Key)\"\r\necho \"\"",
+      "container": "node:20-alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": []
+}

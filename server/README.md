@@ -2,6 +2,15 @@
 
 REST API kết nối **MongoDB Atlas (cloud)** qua biến **`MONGODB_URI`** và xác thực **Clerk** (JWT session từ app Flutter).
 
+**Cấu hình:** Sử dụng file `.env` (như localhost thay vì environment variables)
+
+## Deploy Options
+
+| Platform | Documentation | Status |
+|----------|---------------|--------|
+| **Render** | [Render Deploy](#deploy-trên-render--render) | ✅ Fully supported |
+| **Pterodactyl** | [Pterodactyl Deploy](PTERODACTYL.md) | ✅ Supported (file .env mode) |
+
 ## Cần có
 
 - Node.js **18+**
@@ -58,7 +67,35 @@ Collections trên Atlas: `profiles`, `food_items`, `saved_recipes`.
 
 ---
 
-## Deploy trên [Render](https://render.com)
+---
+
+## Deploy Platform
+
+### Option 1: Pterodactyl Hosting (Khuyên dùng cho đồ án/Hobby)
+
+Xem hướng dẫn chi tiết: [PTERODACTYL.md](PTERODACTYL.md)
+
+**Tóm tắt (File .env mode):**
+1. Upload thư mục `server/` lên Pterodactyl (SFTP hoặc Git)
+2. Trong Pterodactyl Files, copy `.env.example` thành `.env`
+3. Edit file `.env` với các giá trị thật:
+   ```env
+   PORT=25165
+   SERVER_PORT=25165
+   MONGODB_URI=mongodb+srv://...
+   CLERK_SECRET_KEY=sk_test_...
+   ```
+4. Thêm port `25165` vào Allocations tab
+5. Start server (sẽ tự chạy `npm install && node src/index.js`)
+6. Kiểm tra: `http://YOUR_SERVER_IP:25165/health`
+
+**Pterodactyl Egg** (pre-configured template): [pterodactyl-egg.json](pterodactyl-egg.json) - sẽ tự tạo file `.env` khi install
+
+### Option 2: Render (Cloud PaaS)
+
+---
+
+## Deploy trên [Render](https://render.com) (Tùy chọn)
 
 Repo là **monorepo** (Flutter + `server/`). Trên Render bạn chỉ build **thư mục `server/`** (có `Dockerfile`).
 

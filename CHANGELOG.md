@@ -238,6 +238,24 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.4.4] — 2026-04-13
+
+### Thêm mới
+
+- **Trang chủ (Dashboard) thiết kế mới**: Lời chào cá nhân theo thời gian trong ngày (sáng/chiều/tối). Ba thẻ thống kê màu sắc (Tốt / Cần chú ý / Hết hạn). Lưới 4 nút hành động nhanh đến các tính năng chính. Xem trước AI Chat ngay từ trang chủ.
+- **AI Chat công thức**: Trò chuyện nhiều lượt với AI Chef. AI hiểu nguyên liệu đang có trong tủ, ưu tiên món sắp hết hạn. Gợi ý nhanh bằng các prompt sẵn. Giao diện đầy đủ: bong bóng chat, trạng thái đang gõ, cuộn tự động, xoá toàn bộ hội thoại.
+- **Kho thực phẩm phiên bản mới**: Giao diện viết lại hoàn toàn — tab Tủ lạnh / Ngăn đông, thanh tìm kiếm, sắp xếp theo tên / hạn / ngày thêm, danh sách tối ưu rebuild.
+
+### Sửa lỗi
+
+- **Widget Android không tải được:** Lỗi do hai file `build.gradle` và `build.gradle.kts` có `applicationId` khác nhau (`com.harvestandhearth.app` vs `com.harvestandhearth.harvest_and_hearth`) khiến hệ thống không tìm thấy class widget provider. Đồng bộ `build.gradle.kts` và dùng tên lớp đầy đủ trong Manifest.
+
+### Build
+
+- **`1.0.16+17`** (`versionName` **1.0.16**, `versionCode` **17**); APK `harvestnhearth-b0.4.4.apk`.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.

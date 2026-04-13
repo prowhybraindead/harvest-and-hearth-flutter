@@ -36,7 +36,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 | --- | --- |
 | **Kho thực phẩm** | Tủ lạnh / Ngăn đông, tìm kiếm, sắp xếp, xem & chỉnh sửa. **Quét mã vạch / QR** bằng camera (đèn flash). |
 | **Cảnh báo hết hạn** | Gom mặt hàng hết hạn & sắp hết hạn trên trang chủ; **thông báo định kỳ** (Android ~9:00); **widget** (Android — thêm thủ công từ màn hình chính). **Nút mô phỏng thời gian** (góc trái) để test thông báo; tắt bằng `ENABLE_TIME_SIMULATOR=false` trong `.env` khi build. |
-| **AI Chef** | Groq (Llama 3.3) gợi ý 3 công thức từ nguyên liệu trong tủ; fallback **Gemini** nếu Groq lỗi. |
+| **AI Chef** | **Chat nhiều lượt** với AI — hiểu nguyên liệu trong tủ, gợi ý món theo tình trạng thực phẩm. Nhanh với prompt sẵn. Groq (Llama 3.3) gợi ý 3 công thức; fallback **Gemini** nếu Groq lỗi. |
 | **Khám phá** | Món Việt Nam (TheMealDB), tìm kiếm TheMealDB + DuckDuckGo, lưu công thức. |
 | **Dịch** | Dịch tên/mô tả công thức theo ngôn ngữ đang dùng. |
 | **Đám mây** | **MongoDB** qua API Node (`server/`) — đồng bộ kho & công thức đã lưu. |
@@ -64,7 +64,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 
 | Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
 | --- | --- | --- |
-| **b0.4.3** | `1.0.15+16` | `1.0.15` · `16` |
+| **b0.4.4** | `1.0.16+17` | `1.0.16` · `17` |
 
 **b0.3.2:** template Revolvapp Clerk + backlog template — [CHANGELOG](CHANGELOG.md).
 

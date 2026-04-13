@@ -40,6 +40,26 @@ class Translations {
     'dashboard_view_all': 'Xem tất cả',
     'dashboard_ai_suggestion': 'Gợi ý AI',
     'dashboard_alerts': 'Cảnh báo',
+    'dashboard_quick_actions': 'Thao tác nhanh',
+    'dashboard_stats_good': 'Tốt',
+    'dashboard_stats_attention': 'Cần chú ý',
+    'dashboard_stats_expired': 'Hết hạn',
+    'dashboard_stats_total': 'Tổng cộng',
+    'dashboard_chat_hint': 'Chat với AI Chef',
+
+    // AI Chat
+    'chat_title': 'AI Chef Chat',
+    'chat_subtitle': 'Hỏi AI về nấu ăn, bảo quản, gợi ý món',
+    'chat_placeholder': 'Hỏi về nấu ăn, bảo quản thực phẩm...',
+    'chat_send': 'Gửi',
+    'chat_clear': 'Xóa cuộc trò chuyện',
+    'chat_clear_confirm': 'Xóa toàn bộ cuộc trò chuyện?',
+    'chat_typing': 'AI đang trả lời...',
+    'chat_error': 'Không thể gửi tin nhắn. Thử lại?',
+    'chat_empty_state': 'Chào bạn! 👨‍🍳\nHãy hỏi tôi về nấu ăn, gợi ý món từ tủ lạnh, hoặc mẹo bảo quản thực phẩm.',
+    'chat_context_pill': '📦 Dựa trên {count} mặt hàng trong kho',
+    'chat_no_context': 'Kho trống — AI sẽ gợi ý chung',
+    'chat_quick_prompts': 'Gợi ý nhanh',
 
     // Inventory
     'inventory_title': 'Kho thực phẩm',
@@ -233,6 +253,26 @@ class Translations {
     'dashboard_view_all': 'View all',
     'dashboard_ai_suggestion': 'AI Suggestion',
     'dashboard_alerts': 'Alerts',
+    'dashboard_quick_actions': 'Quick Actions',
+    'dashboard_stats_good': 'Good',
+    'dashboard_stats_attention': 'Attention',
+    'dashboard_stats_expired': 'Expired',
+    'dashboard_stats_total': 'Total',
+    'dashboard_chat_hint': 'Chat with AI Chef',
+
+    // AI Chat
+    'chat_title': 'AI Chef Chat',
+    'chat_subtitle': 'Ask AI about cooking, preservation, recipe ideas',
+    'chat_placeholder': 'Ask about cooking, food preservation...',
+    'chat_send': 'Send',
+    'chat_clear': 'Clear chat',
+    'chat_clear_confirm': 'Clear entire conversation?',
+    'chat_typing': 'AI is typing...',
+    'chat_error': 'Could not send message. Retry?',
+    'chat_empty_state': 'Hi there! 👨‍🍳\nAsk me about cooking, recipe ideas from your fridge, or food preservation tips.',
+    'chat_context_pill': '📦 Based on {count} items in your inventory',
+    'chat_no_context': 'Empty inventory — AI will give general tips',
+    'chat_quick_prompts': 'Quick prompts',
 
     // Inventory
     'inventory_title': 'Food Inventory',

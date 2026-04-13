@@ -44,7 +44,7 @@
             android:value="2" />
 
         <receiver
-            android:name=".HarvestWidgetProvider"
+            android:name="com.harvestandhearth.app.HarvestWidgetProvider"
             android:exported="true"
             android:label="@string/widget_label"
             android:icon="@mipmap/ic_launcher">

@@ -7,12 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/simulated_clock.dart';
+import '../models/chat_message.dart';
 import '../models/food_item.dart';
 import '../models/recipe.dart';
 import '../models/user.dart';
 import '../constants/translations.dart';
 import '../services/backend_api_service.dart';
 import '../services/expiry_reminder_service.dart';
+import '../services/groq_chat_service.dart';
 import '../services/home_widget_service.dart';
 
 const _uuid = Uuid();
@@ -30,8 +32,14 @@ class AppProvider extends ChangeNotifier {
   String? _boundUserId;
   bool _expiryRemindersEnabled = true;
 
+  // ── Chat State ─────────────────────────────────────────────────────────────
+  List<ChatMessage> _chatMessages = [];
+  bool _isAiTyping = false;
+  String? _chatError;
+
   // ── Getters ────────────────────────────────────────────────────────────────
   AppUser? get user => _user;
+
   /// True while loading profile/inventory after Clerk sign-in.
   bool get isLoadingUser => _isLoadingUser;
   List<FoodItem> get inventory => List.unmodifiable(_inventory);
@@ -41,6 +49,13 @@ class AppProvider extends ChangeNotifier {
   bool get isDark => _isDark;
   bool get isInitialized => _isInitialized;
   bool get expiryRemindersEnabled => _expiryRemindersEnabled;
+
+  // Chat getters
+  List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  bool get isAiTyping => _isAiTyping;
+  String? get chatError => _chatError;
+  List<String> get chatQuickPrompts =>
+      GroqChatService.instance.getQuickPrompts(_language, _inventory);
 
   String t(String key) => Translations.get(key, _language);
 
@@ -60,7 +75,8 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
     await ExpiryReminderService.instance.setRemindersEnabled(value);
     if (value) {
-      await ExpiryReminderService.instance.requestPostNotificationsPermissionIfNeeded();
+      await ExpiryReminderService.instance
+          .requestPostNotificationsPermissionIfNeeded();
     }
     await _syncExpiryRemindersAndWidget();
   }
@@ -116,6 +132,10 @@ class AppProvider extends ChangeNotifier {
     _recipeCache = [];
     _boundUserId = null;
     _isLoadingUser = false;
+    _chatMessages = [];
+    _isAiTyping = false;
+    _chatError = null;
+    GroqChatService.instance.clearHistory();
     SimulatedClock.reset();
     BackendApiService.instance.detach();
     unawaited(_clearAlerts());
@@ -152,12 +172,12 @@ class AppProvider extends ChangeNotifier {
     final recipeRows = results[2] as List<Map<String, dynamic>>;
 
     final nameFromProfile = profile['name'] as String?;
-    final displayName = (nameFromProfile != null &&
-            nameFromProfile.trim().isNotEmpty)
-        ? nameFromProfile.trim()
-        : (clerkUser.name.trim().isNotEmpty
-            ? clerkUser.name.trim()
-            : (clerkUser.email?.split('@').first ?? 'User'));
+    final displayName =
+        (nameFromProfile != null && nameFromProfile.trim().isNotEmpty)
+            ? nameFromProfile.trim()
+            : (clerkUser.name.trim().isNotEmpty
+                ? clerkUser.name.trim()
+                : (clerkUser.email?.split('@').first ?? 'User'));
 
     if (nameFromProfile == null || nameFromProfile.trim().isEmpty) {
       await BackendApiService.instance.upsertProfile(
@@ -323,6 +343,45 @@ class AppProvider extends ChangeNotifier {
       }
     }
     _scheduleAlerts();
+  }
+
+  // ── AI Chat ────────────────────────────────────────────────────────────────
+  Future<void> sendChatMessage(String message) async {
+    if (message.trim().isEmpty) return;
+
+    _chatError = null;
+    // Add user message
+    final userMsg = ChatMessage(
+      id: const Uuid().v4(),
+      role: ChatRole.user,
+      content: message.trim(),
+      timestamp: DateTime.now(),
+    );
+    _chatMessages = [..._chatMessages, userMsg];
+    _isAiTyping = true;
+    notifyListeners();
+
+    try {
+      final response = await GroqChatService.instance.sendMessage(
+        message,
+        _inventory,
+        _language,
+      );
+      _chatMessages = [..._chatMessages, response];
+    } catch (e) {
+      _chatError = e.toString();
+      debugPrint('sendChatMessage: $e');
+    } finally {
+      _isAiTyping = false;
+      notifyListeners();
+    }
+  }
+
+  void clearChat() {
+    GroqChatService.instance.clearHistory();
+    _chatMessages = [];
+    _chatError = null;
+    notifyListeners();
   }
 
   // ── Default data ───────────────────────────────────────────────────────────

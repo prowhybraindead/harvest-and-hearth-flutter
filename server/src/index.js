@@ -1,22 +1,25 @@
 /**
  * Harvest & Hearth API — MongoDB + Clerk session JWT verification.
  *
- * Env: MONGODB_URI, CLERK_SECRET_KEY, PORT (optional, default 8787)
- * Middleware: compression (gzip), CORS, trust proxy (Render / reverse proxy).
+ * Env: MONGODB_URI, CLERK_SECRET_KEY, PORT (optional, default 25165)
+ *       Pterodactyl: SERVER_PORT, NODE_ENV
+ *       Reads from .env file if exists (like localhost)
+ * Middleware: compression (gzip), CORS
  */
+import 'dotenv/config';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import { verifyToken } from '@clerk/backend';
 import { MongoClient } from 'mongodb';
 
-const PORT = Number(process.env.PORT) || 8787;
+const PORT = Number(process.env.PORT) || Number(process.env.SERVER_PORT) || 25165;
 const MONGODB_URI = process.env.MONGODB_URI || '';
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY || '';
+const NODE_ENV = process.env.NODE_ENV || 'production';
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 1);
 app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
@@ -254,12 +257,41 @@ async function main() {
     { unique: true },
   );
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`API listening on 0.0.0.0:${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Harvest & Hearth API] Server listening on 0.0.0.0:${PORT}`);
+    console.log(`[Harvest & Hearth API] Environment: ${NODE_ENV}`);
+    console.log(`[Harvest & Hearth API] MongoDB: Connected`);
   });
+
+  // Graceful shutdown cho Pterodactyl
+  const gracefulShutdown = async (signal) => {
+    console.log(`\n[Harvest & Hearth API] ${signal} received, shutting down gracefully...`);
+    server.close(async () => {
+      console.log('[Harvest & Hearth API] HTTP server closed');
+      try {
+        if (client) {
+          await client.close();
+          console.log('[Harvest & Hearth API] MongoDB connection closed');
+        }
+        process.exit(0);
+      } catch (err) {
+        console.error('[Harvest & Hearth API] Error during shutdown:', err);
+        process.exit(1);
+      }
+    });
+
+    // Force shutdown sau 10s nếu không đóng được
+    setTimeout(() => {
+      console.error('[Harvest & Hearth API] Forcing shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error('[Harvest & Hearth API] Fatal error:', e);
   process.exit(1);
 });
