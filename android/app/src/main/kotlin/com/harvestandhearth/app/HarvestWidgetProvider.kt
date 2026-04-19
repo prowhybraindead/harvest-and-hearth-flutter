@@ -17,13 +17,14 @@ class HarvestWidgetProvider : HomeWidgetProvider() {
         widgetData: android.content.SharedPreferences,
     ) {
         appWidgetIds.forEach { widgetId ->
-            val options = appWidgetManager.getAppWidgetOptions(widgetId)
-            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
-            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 260)
-            val isCompact = minHeight < 120 || minWidth < 250
-            val isUltraCompact = minHeight < 105 || minWidth < 220
+            try {
+                val options = appWidgetManager.getAppWidgetOptions(widgetId)
+                val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
+                val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 260)
+                val isCompact = minHeight < 120 || minWidth < 250
+                val isUltraCompact = minHeight < 105 || minWidth < 220
 
-            val views = RemoteViews(context.packageName, R.layout.harvest_widget).apply {
+                val views = RemoteViews(context.packageName, R.layout.harvest_widget).apply {
                 val expiringCount = widgetData.getString("expiring_count", null)
                 val expiredCountRaw = widgetData.getString("expired_count", "0") ?: "0"
                 val expiredCount = expiredCountRaw.toIntOrNull() ?: 0
@@ -168,7 +169,18 @@ class HarvestWidgetProvider : HomeWidgetProvider() {
                     setOnClickPendingIntent(R.id.widget_root, pendingIntent)
                 }
             }
-            appWidgetManager.updateAppWidget(widgetId, views)
+                appWidgetManager.updateAppWidget(widgetId, views)
+            } catch (_: Exception) {
+                // Keep widget alive with a minimal fallback to avoid "Can't load widget".
+                val fallback = RemoteViews(context.packageName, R.layout.harvest_widget).apply {
+                    setTextViewText(R.id.widget_title, "Harvest & Hearth")
+                    setTextViewText(R.id.widget_status_chip, "Đang cập nhật")
+                    setTextViewText(R.id.widget_expiring_value, "0")
+                    setTextViewText(R.id.widget_expired_value, "0")
+                    setTextViewText(R.id.widget_line2, "Mở app để đồng bộ lại")
+                }
+                appWidgetManager.updateAppWidget(widgetId, fallback)
+            }
         }
     }
 }

@@ -15,6 +15,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 
 const PORT = Number(process.env.PORT) || Number(process.env.SERVER_PORT) || 25165;
 const MONGODB_URI = process.env.MONGODB_URI || '';
+const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'harvest_and_hearth';
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY || '';
 const NODE_ENV = process.env.NODE_ENV || 'production';
 
@@ -34,8 +35,8 @@ async function connectMongo() {
   }
   client = new MongoClient(MONGODB_URI);
   await client.connect();
-  db = client.db();
-  console.log('MongoDB connected');
+  db = client.db(MONGODB_DB_NAME);
+  console.log(`MongoDB connected (db=${MONGODB_DB_NAME})`);
 }
 
 function profiles() {

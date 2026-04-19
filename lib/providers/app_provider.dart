@@ -176,17 +176,18 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> _loadUserData(clerk.User clerkUser) async {
-    final results = await Future.wait([
-      BackendApiService.instance.getProfile(),
-      BackendApiService.instance.getFoodItems(clerkUser.id),
-      BackendApiService.instance.getSavedRecipes(clerkUser.id),
-      BackendApiService.instance.getNotificationLogs(),
-    ]);
-
-    final profile = results[0] as Map<String, dynamic>;
-    final itemRows = results[1] as List<Map<String, dynamic>>;
-    final recipeRows = results[2] as List<Map<String, dynamic>>;
-    final notificationRows = results[3] as List<Map<String, dynamic>>;
+    final profile = await BackendApiService.instance.getProfile();
+    final itemRows = await BackendApiService.instance.getFoodItems(clerkUser.id);
+    final recipeRows = await _safeApiCall<List<Map<String, dynamic>>>(
+          'getSavedRecipes',
+          () => BackendApiService.instance.getSavedRecipes(clerkUser.id),
+        ) ??
+        const <Map<String, dynamic>>[];
+    final notificationRows = await _safeApiCall<List<Map<String, dynamic>>>(
+          'getNotificationLogs',
+          () => BackendApiService.instance.getNotificationLogs(),
+        ) ??
+        const <Map<String, dynamic>>[];
 
     final nameFromProfile = profile['name'] as String?;
     final displayName =
@@ -224,15 +225,47 @@ class AppProvider extends ChangeNotifier {
         _inventory,
       );
     } else {
-      _inventory = itemRows.map(FoodItem.fromApiRow).toList();
+      _inventory = _parseFoodRows(itemRows);
     }
 
-    _savedRecipes = recipeRows
-        .map((row) =>
-            Recipe.fromJson(row['recipe_data'] as Map<String, dynamic>))
-        .toList();
+    _savedRecipes = _parseSavedRecipeRows(recipeRows);
     _notificationLogs = notificationRows;
     _scheduleAlerts();
+  }
+
+  Future<T?> _safeApiCall<T>(String label, Future<T> Function() action) async {
+    try {
+      return await action();
+    } catch (e, st) {
+      debugPrint('$label: $e\n$st');
+      return null;
+    }
+  }
+
+  List<FoodItem> _parseFoodRows(List<Map<String, dynamic>> rows) {
+    final out = <FoodItem>[];
+    for (final row in rows) {
+      try {
+        out.add(FoodItem.fromApiRow(row));
+      } catch (e, st) {
+        debugPrint('FoodItem.fromApiRow: $e\n$st');
+      }
+    }
+    return out;
+  }
+
+  List<Recipe> _parseSavedRecipeRows(List<Map<String, dynamic>> rows) {
+    final out = <Recipe>[];
+    for (final row in rows) {
+      final raw = row['recipe_data'];
+      if (raw is! Map) continue;
+      try {
+        out.add(Recipe.fromJson(Map<String, dynamic>.from(raw)));
+      } catch (e, st) {
+        debugPrint('Recipe.fromJson(saved): $e\n$st');
+      }
+    }
+    return out;
   }
 
   Future<void> refreshNotificationLogs() async {
