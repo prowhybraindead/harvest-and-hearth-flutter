@@ -226,6 +226,47 @@ class BackendApiService {
     );
     _throwIfBad(r);
   }
+
+  // ── Notifications log ─────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> createNotificationLog({
+    required String title,
+    required String message,
+    required String type,
+  }) async {
+    final r = await _post(
+      _u('/api/v1/notifications'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'title': title,
+        'message': message,
+        'type': type,
+      }),
+    );
+    _throwIfBad(r);
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getNotificationLogs() async {
+    final r = await _get(
+      _u('/api/v1/notifications'),
+      headers: await _headers(),
+    );
+    _throwIfBad(r);
+    return _decodeJsonList(r.body);
+  }
+
+  Future<void> setNotificationLogRead(
+    String notificationId, {
+    required bool isRead,
+  }) async {
+    final id = Uri.encodeComponent(notificationId);
+    final r = await _patch(
+      _u('/api/v1/notifications/$id/read'),
+      headers: await _headers(),
+      body: jsonEncode({'isRead': isRead}),
+    );
+    _throwIfBad(r);
+  }
 }
 
 class BackendApiException implements Exception {

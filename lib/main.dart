@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
@@ -268,6 +270,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  StreamSubscription<String>? _notificationTapSub;
 
   static const List<Widget> _screens = [
     DashboardScreen(),
@@ -286,6 +289,25 @@ class _MainShellState extends State<MainShell> {
       ),
       builder: (_) => const AddFoodModal(),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationTapSub = ExpiryReminderService.instance.tapPayloadStream.listen(
+      (payload) {
+        if (!mounted) return;
+        if (payload.startsWith('expiry:')) {
+          setState(() => _currentIndex = 0);
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _notificationTapSub?.cancel();
+    super.dispose();
   }
 
   @override

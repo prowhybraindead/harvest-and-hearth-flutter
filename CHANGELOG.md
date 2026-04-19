@@ -256,6 +256,40 @@ Tất cả thay đổi đáng chú ý của dự án **Harvest & Hearth Flutter*
 
 ---
 
+## [b0.4.5] — 2026-04-20
+
+### Thêm mới
+
+- **Nhật ký thông báo theo user (MongoDB):** thêm API backend `notifications` với các route đọc danh sách, tạo log, đánh dấu đã đọc; lưu theo `userId`, `title`, `message`, `type`, `isRead`, `createdAt`.
+- **Thông báo trong app nâng cấp:** tách rõ 3 loại thông báo (daily summary, urgent expiry, test immediate), thêm payload khi bấm thông báo, thêm icon status bar Android (`ic_stat_harvest`).
+- **Home widget Android nâng cấp lớn:**
+  - thêm trạng thái tổng quát (safe / warning / danger), thời điểm cập nhật, tap widget mở app;
+  - thêm chế độ compact / ultra-compact cho launcher grid nhỏ;
+  - thêm nền widget đổi theo mức cảnh báo.
+- **Dashboard bổ sung luồng quét barcode từ màn chính:** nút quét trên Home mở scanner trực tiếp và tự điền kết quả vào modal thêm thực phẩm.
+- **Dashboard mới phần gợi ý công thức thời gian thực:** sinh gợi ý theo thời điểm trong ngày + trạng thái nguyên liệu, chạm vào từng gợi ý để mở AI Chef với prompt soạn sẵn.
+- **Khám phá công thức mở rộng nguồn dữ liệu món Việt:** kết hợp TheMealDB + DummyJSON, gộp và loại trùng danh sách.
+
+### Cải tiến
+
+- **Dịch công thức EN → VI mạnh hơn:**
+  - tự dịch tên/mô tả món trong Explore khi app ở tiếng Việt;
+  - trong màn chi tiết công thức dịch đầy đủ cả nguyên liệu và các bước nấu;
+  - giữ khả năng chuyển qua lại bản gốc / bản dịch.
+- **Thẻ công thức hiển thị nguồn dữ liệu:** thêm nhãn nguồn (`TheMealDB`, `DummyJSON`, `AI Chef`) để minh bạch dữ liệu khi demo.
+- **Màu cảnh báo trên Home được làm dịu:** giảm độ chói các badge/thanh cảnh báo hết hạn-sắp hết hạn theo feedback.
+
+### Sửa lỗi
+
+- **Nút quét barcode ở Dashboard:** sửa lỗi điều hướng route chưa khai báo, chuyển sang mở scanner trực tiếp bằng `BarcodeScannerScreen`.
+- **Ghi log thông báo tránh trùng lặp:** thêm cơ chế dedupe theo ngày cho một số loại thông báo tóm tắt / khẩn.
+
+### Build
+
+- **`1.0.17+18`** (`versionName` **1.0.17**, `versionCode` **18**); APK `harvestnhearth-b0.4.5.apk`.
+
+---
+
 ## Sắp ra mắt (Backlog)
 
 - [x] Quét mã vạch và mã QR thực sự bằng camera.

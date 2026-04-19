@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../models/food_item.dart';
 import '../screens/ai_chat_screen.dart';
+import '../screens/barcode_scanner_screen.dart';
+import '../screens/recipes_screen.dart';
 import '../widgets/add_food_modal.dart';
 import '../constants/categories.dart';
 import '../utils/date_helper.dart';
@@ -79,6 +81,10 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
+          _SectionHeader(title: t('dashboard_realtime_recipes')),
+          const SizedBox(height: 10),
+          _RealtimeRecipeSuggestionsCard(provider: provider),
+          const SizedBox(height: 20),
           _SectionHeader(title: t('dashboard_recent')),
           const SizedBox(height: 10),
           if (recent.isEmpty)
@@ -312,8 +318,25 @@ class _QuickActionGrid extends StatelessWidget {
           icon: Icons.qr_code_scanner_rounded,
           label: t('food_barcode'),
           color: Colors.teal,
-          onTap: () {
-            Navigator.pushNamed(context, '/barcode-scanner');
+          onTap: () async {
+            final scanned = await Navigator.of(context, rootNavigator: true)
+                .push<String>(
+              MaterialPageRoute(
+                fullscreenDialog: true,
+                builder: (_) => BarcodeScannerScreen(t: t),
+              ),
+            );
+            if (!context.mounted) return;
+            if (scanned == null || scanned.isEmpty) return;
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              builder: (_) => AddFoodModal(initialScannedName: scanned),
+            );
           },
         ),
         const SizedBox(width: 10),
@@ -335,7 +358,10 @@ class _QuickActionGrid extends StatelessWidget {
           label: t('dashboard_ai_suggestion'),
           color: Colors.deepPurple,
           onTap: () {
-            // Switch to recipes tab is handled by MainShell
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RecipesScreen()),
+            );
           },
         ),
       ],
@@ -539,14 +565,24 @@ class _AlertRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isExpired ? Colors.red : Colors.orange;
+    final cs = Theme.of(context).colorScheme;
+    final color = isExpired
+        ? cs.error
+        : (cs.brightness == Brightness.dark
+            ? const Color(0xFFFFC46B)
+            : const Color(0xFFB76A00));
+    final bg = isExpired
+        ? cs.errorContainer.withAlpha(120)
+        : (cs.brightness == Brightness.dark
+            ? const Color(0xFF4A3200).withAlpha(120)
+            : const Color(0xFFFFF1D8));
     final info = AppCategories.forCategory(item.category);
     return ListTile(
       leading: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: color.withAlpha(20),
+          color: bg,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(info.icon, color: color, size: 20),
@@ -560,7 +596,7 @@ class _AlertRow extends StatelessWidget {
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: color.withAlpha(20),
+          color: bg,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -573,6 +609,186 @@ class _AlertRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RealtimeRecipeSuggestionsCard extends StatelessWidget {
+  const _RealtimeRecipeSuggestionsCard({required this.provider});
+
+  final AppProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final suggestions = _buildSuggestions(provider);
+    if (suggestions.isEmpty) {
+      return _EmptyCard(message: provider.t('dashboard_recipe_suggest_empty'));
+    }
+
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+        child: Column(
+          children: [
+            ...suggestions.map(
+              (s) => ListTile(
+                dense: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AiChatScreen(initialPrompt: s.prompt),
+                    ),
+                  );
+                },
+                leading: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(s.icon, size: 18, color: cs.onPrimaryContainer),
+                ),
+                title: Text(
+                  s.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(s.subtitle),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RecipesScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.restaurant_menu_rounded, size: 18),
+                    label: Text(provider.t('dashboard_recipe_open_recipes')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AiChatScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.smart_toy_rounded, size: 18),
+                    label: Text(provider.t('dashboard_recipe_open_ai')),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<_RecipeSuggestion> _buildSuggestions(AppProvider provider) {
+    final inventory = provider.inventory;
+    final lang = provider.language;
+    final expiring = provider.expiringSoonItems;
+    final hour = DateTime.now().hour;
+    final isVn = lang == 'VIE';
+
+    final list = <_RecipeSuggestion>[];
+
+    if (expiring.isNotEmpty) {
+      final item = expiring.first;
+      list.add(
+        _RecipeSuggestion(
+          icon: Icons.schedule_rounded,
+          title: isVn ? 'Ưu tiên hôm nay: ${item.name}' : 'Priority today: ${item.name}',
+          subtitle: isVn
+              ? 'Nên ưu tiên ${item.name} trước để hạn chế lãng phí thực phẩm.'
+              : 'Cook with ${item.name} first to reduce waste.',
+          prompt: isVn
+              ? 'Gợi ý 2 món Việt đơn giản để xử lý ${item.name} trước hôm nay, kèm thời gian nấu ngắn.'
+              : 'Suggest 2 quick meals to use ${item.name} first today with short cooking time.',
+        ),
+      );
+    }
+
+    if (hour < 10) {
+      list.add(
+        _RecipeSuggestion(
+          icon: Icons.wb_sunny_outlined,
+          title: isVn ? 'Gợi ý bữa sáng nhanh, dễ làm' : 'Light breakfast idea',
+          subtitle: isVn
+              ? 'Ưu tiên món 10-15 phút từ nguyên liệu đang có trong kho.'
+              : 'Prioritize quick 10-15 minute meals from your inventory.',
+          prompt: isVn
+              ? 'Gợi ý thực đơn bữa sáng nhanh 10-15 phút từ các nguyên liệu hiện có trong kho.'
+              : 'Suggest a quick 10-15 minute breakfast plan from my current inventory.',
+        ),
+      );
+    } else if (hour < 16) {
+      list.add(
+        _RecipeSuggestion(
+          icon: Icons.lunch_dining_outlined,
+          title: isVn ? 'Gợi ý bữa trưa cân bằng dinh dưỡng' : 'Balanced lunch idea',
+          subtitle: isVn
+              ? 'Kết hợp đạm và rau để đủ năng lượng cho cả buổi chiều.'
+              : 'Combine protein + vegetables for steady afternoon energy.',
+          prompt: isVn
+              ? 'Gợi ý bữa trưa cân bằng dinh dưỡng từ nguyên liệu trong kho, ưu tiên món Việt dễ nấu.'
+              : 'Suggest a balanced lunch from my inventory with easy-to-cook meals.',
+        ),
+      );
+    } else {
+      list.add(
+        _RecipeSuggestion(
+          icon: Icons.dinner_dining_outlined,
+          title: isVn ? 'Gợi ý bữa tối gọn nhẹ sau giờ làm' : 'Time-saving dinner idea',
+          subtitle: isVn
+              ? 'Ưu tiên món một chảo hoặc một nồi để nấu và dọn nhanh.'
+              : 'Try one-pan or one-pot dishes for faster cleanup.',
+          prompt: isVn
+              ? 'Gợi ý bữa tối gọn nhẹ kiểu một chảo hoặc một nồi từ nguyên liệu hiện có.'
+              : 'Suggest a quick one-pan or one-pot dinner from my current ingredients.',
+        ),
+      );
+    }
+
+    if (inventory.length >= 3) {
+      list.add(
+        _RecipeSuggestion(
+          icon: Icons.auto_awesome_rounded,
+          title: isVn ? 'Menu tức thì từ kho hiện tại' : 'Instant menu from current inventory',
+          subtitle: isVn
+              ? 'AI có thể dựng thực đơn theo đúng nguyên liệu bạn đang có ngay lúc này.'
+              : 'AI can build a menu directly from what you have now.',
+          prompt: isVn
+              ? 'Lập thực đơn 1 ngày (sáng-trưa-tối) theo nguyên liệu hiện có trong kho của tôi.'
+              : 'Build a 1-day meal plan (breakfast-lunch-dinner) from my current inventory.',
+        ),
+      );
+    }
+
+    return list.take(3).toList(growable: false);
+  }
+}
+
+class _RecipeSuggestion {
+  const _RecipeSuggestion({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.prompt,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String prompt;
 }
 
 // ── Recent Items List ───────────────────────────────────────────────────────
@@ -655,9 +871,21 @@ class _ExpiryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final color = isExpired
-        ? Colors.red
-        : (isExpiringSoon ? Colors.orange : Colors.green);
+      ? cs.error
+      : (isExpiringSoon
+        ? (cs.brightness == Brightness.dark
+          ? const Color(0xFFFFC46B)
+          : const Color(0xFFB76A00))
+        : const Color(0xFF2E7D32));
+    final bg = isExpired
+      ? cs.errorContainer.withAlpha(120)
+      : (isExpiringSoon
+        ? (cs.brightness == Brightness.dark
+          ? const Color(0xFF4A3200).withAlpha(110)
+          : const Color(0xFFFFF1D8))
+        : const Color(0xFFE6F4EA));
     final icon = isExpired
         ? Icons.dangerous_rounded
         : (isExpiringSoon
@@ -667,7 +895,7 @@ class _ExpiryBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withAlpha(15),
+        color: bg,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -742,12 +970,17 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context)
-          .textTheme
-          .titleMedium
-          ?.copyWith(fontWeight: FontWeight.bold),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

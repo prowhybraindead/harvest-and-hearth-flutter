@@ -31,11 +31,14 @@ class AppProvider extends ChangeNotifier {
   bool _isLoadingUser = false;
   String? _boundUserId;
   bool _expiryRemindersEnabled = true;
+  List<Map<String, dynamic>> _notificationLogs = [];
+  bool _isLoadingNotifications = false;
 
   // ── Chat State ─────────────────────────────────────────────────────────────
   List<ChatMessage> _chatMessages = [];
   bool _isAiTyping = false;
   String? _chatError;
+  String? _lastFailedUserMessage;
 
   // ── Getters ────────────────────────────────────────────────────────────────
   AppUser? get user => _user;
@@ -49,11 +52,16 @@ class AppProvider extends ChangeNotifier {
   bool get isDark => _isDark;
   bool get isInitialized => _isInitialized;
   bool get expiryRemindersEnabled => _expiryRemindersEnabled;
+  List<Map<String, dynamic>> get notificationLogs =>
+      List.unmodifiable(_notificationLogs);
+  bool get isLoadingNotifications => _isLoadingNotifications;
 
   // Chat getters
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
   bool get isAiTyping => _isAiTyping;
   String? get chatError => _chatError;
+    bool get canRetryLastChat =>
+      _lastFailedUserMessage != null && _lastFailedUserMessage!.isNotEmpty;
   List<String> get chatQuickPrompts =>
       GroqChatService.instance.getQuickPrompts(_language, _inventory);
 
@@ -93,7 +101,11 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> _syncExpiryRemindersAndWidget() async {
     await ExpiryReminderService.instance
-        .syncInventory(_inventory, language: _language);
+        .syncInventory(
+          _inventory,
+          language: _language,
+          userId: _user?.id,
+        );
     await HomeWidgetService.instance.update(_inventory, _language);
   }
 
@@ -135,6 +147,9 @@ class AppProvider extends ChangeNotifier {
     _chatMessages = [];
     _isAiTyping = false;
     _chatError = null;
+    _lastFailedUserMessage = null;
+    _notificationLogs = [];
+    _isLoadingNotifications = false;
     GroqChatService.instance.clearHistory();
     SimulatedClock.reset();
     BackendApiService.instance.detach();
@@ -165,11 +180,13 @@ class AppProvider extends ChangeNotifier {
       BackendApiService.instance.getProfile(),
       BackendApiService.instance.getFoodItems(clerkUser.id),
       BackendApiService.instance.getSavedRecipes(clerkUser.id),
+      BackendApiService.instance.getNotificationLogs(),
     ]);
 
     final profile = results[0] as Map<String, dynamic>;
     final itemRows = results[1] as List<Map<String, dynamic>>;
     final recipeRows = results[2] as List<Map<String, dynamic>>;
+    final notificationRows = results[3] as List<Map<String, dynamic>>;
 
     final nameFromProfile = profile['name'] as String?;
     final displayName =
@@ -214,7 +231,43 @@ class AppProvider extends ChangeNotifier {
         .map((row) =>
             Recipe.fromJson(row['recipe_data'] as Map<String, dynamic>))
         .toList();
+    _notificationLogs = notificationRows;
     _scheduleAlerts();
+  }
+
+  Future<void> refreshNotificationLogs() async {
+    if (!BackendApiService.instance.isConfigured) return;
+    _isLoadingNotifications = true;
+    notifyListeners();
+    try {
+      _notificationLogs = await BackendApiService.instance.getNotificationLogs();
+    } catch (e, st) {
+      debugPrint('refreshNotificationLogs: $e\n$st');
+    } finally {
+      _isLoadingNotifications = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> markNotificationLogRead(String id, {bool isRead = true}) async {
+    if (id.isEmpty || !BackendApiService.instance.isConfigured) return;
+    final index = _notificationLogs.indexWhere((n) => n['id'] == id);
+    if (index == -1) return;
+
+    _notificationLogs[index] = {
+      ..._notificationLogs[index],
+      'isRead': isRead,
+    };
+    notifyListeners();
+
+    try {
+      await BackendApiService.instance.setNotificationLogRead(
+        id,
+        isRead: isRead,
+      );
+    } catch (e, st) {
+      debugPrint('markNotificationLogRead: $e\n$st');
+    }
   }
 
   // ── Auth (Clerk UI handles sign-in; only sign-out from app) ────────────────
@@ -347,14 +400,16 @@ class AppProvider extends ChangeNotifier {
 
   // ── AI Chat ────────────────────────────────────────────────────────────────
   Future<void> sendChatMessage(String message) async {
-    if (message.trim().isEmpty) return;
+    final trimmed = message.trim();
+    if (trimmed.isEmpty || _isAiTyping) return;
 
     _chatError = null;
+    _lastFailedUserMessage = null;
     // Add user message
     final userMsg = ChatMessage(
       id: const Uuid().v4(),
       role: ChatRole.user,
-      content: message.trim(),
+      content: trimmed,
       timestamp: DateTime.now(),
     );
     _chatMessages = [..._chatMessages, userMsg];
@@ -363,13 +418,14 @@ class AppProvider extends ChangeNotifier {
 
     try {
       final response = await GroqChatService.instance.sendMessage(
-        message,
+        trimmed,
         _inventory,
         _language,
       );
       _chatMessages = [..._chatMessages, response];
     } catch (e) {
-      _chatError = e.toString();
+      _lastFailedUserMessage = trimmed;
+      _chatError = _normalizeChatError(e);
       debugPrint('sendChatMessage: $e');
     } finally {
       _isAiTyping = false;
@@ -377,10 +433,34 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> retryLastChatMessage() async {
+    final failed = _lastFailedUserMessage;
+    if (failed == null || failed.isEmpty || _isAiTyping) return;
+
+    _chatMessages = _chatMessages
+        .where((m) => !(m.role == ChatRole.user && m.content == failed))
+        .toList();
+    notifyListeners();
+    await sendChatMessage(failed);
+  }
+
+  String _normalizeChatError(Object error) {
+    final raw = error.toString();
+    final clean = raw.replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+    if (clean.toLowerCase().contains('timed out')) {
+      return 'timeout';
+    }
+    if (clean.toLowerCase().contains('api key')) {
+      return 'api_key_missing';
+    }
+    return clean;
+  }
+
   void clearChat() {
     GroqChatService.instance.clearHistory();
     _chatMessages = [];
     _chatError = null;
+    _lastFailedUserMessage = null;
     notifyListeners();
   }
 

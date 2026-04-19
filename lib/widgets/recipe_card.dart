@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
 import '../providers/app_provider.dart';
+import '../services/translate_service.dart';
 
 class RecipeCard extends StatelessWidget {
   final Recipe recipe;
@@ -64,6 +65,11 @@ class RecipeCard extends StatelessWidget {
                             fontSize: 12,
                             color: cs.onSurfaceVariant,
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        _SourceChip(
+                          sourceName: recipe.sourceName,
+                          cs: cs,
                         ),
                       ],
                     ),
@@ -161,6 +167,35 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
+class _SourceChip extends StatelessWidget {
+  const _SourceChip({
+    required this.sourceName,
+    required this.cs,
+  });
+
+  final String sourceName;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer.withAlpha(140),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        sourceName,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: cs.onPrimaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
 class _DifficultyChip extends StatelessWidget {
   final RecipeDifficulty difficulty;
   final String Function(String) t;
@@ -198,7 +233,7 @@ class _DifficultyChip extends StatelessWidget {
   }
 }
 
-class _RecipeDetailSheet extends StatelessWidget {
+class _RecipeDetailSheet extends StatefulWidget {
   final Recipe recipe;
   final AppProvider provider;
   final ScrollController controller;
@@ -210,13 +245,89 @@ class _RecipeDetailSheet extends StatelessWidget {
   });
 
   @override
+  State<_RecipeDetailSheet> createState() => _RecipeDetailSheetState();
+}
+
+class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
+  String? _translatedName;
+  String? _translatedDesc;
+  List<String>? _translatedIngredients;
+  List<String>? _translatedInstructions;
+  bool _translating = false;
+  bool _showingTranslated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.provider.language == 'VIE' && _looksEnglishRecipe(widget.recipe)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _translateAll());
+    }
+  }
+
+  Future<void> _translateAll() async {
+    if (_translatedName != null) {
+      setState(() => _showingTranslated = !_showingTranslated);
+      return;
+    }
+
+    setState(() => _translating = true);
+    final lang = widget.provider.language;
+    final r = widget.recipe;
+    final nameDesc = await Future.wait([
+      TranslateService.instance.translate(r.name, lang),
+      TranslateService.instance.translate(r.description, lang),
+    ]);
+    final ingredients = await _translateList(r.ingredientsNeeded, lang);
+    final instructions = await _translateList(r.instructions, lang);
+
+    if (!mounted) return;
+    setState(() {
+      _translatedName = nameDesc[0];
+      _translatedDesc = nameDesc[1];
+      _translatedIngredients = ingredients;
+      _translatedInstructions = instructions;
+      _showingTranslated = true;
+      _translating = false;
+    });
+  }
+
+  Future<List<String>> _translateList(List<String> values, String lang) async {
+    final out = <String>[];
+    for (final v in values) {
+      out.add(await TranslateService.instance.translate(v, lang));
+    }
+    return out;
+  }
+
+  bool _looksEnglishRecipe(Recipe recipe) {
+    final text = '${recipe.name} ${recipe.description}'.trim();
+    if (text.isEmpty) return false;
+    return RegExp(r'^[A-Za-z0-9\s\-,.():;/]+$').hasMatch(text);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider = widget.provider;
+    final recipe = widget.recipe;
     final t = provider.t;
     final cs = Theme.of(context).colorScheme;
     final isSaved = provider.isRecipeSaved(recipe.id);
 
+    final displayName = (_showingTranslated && _translatedName != null)
+        ? _translatedName!
+        : recipe.name;
+    final displayDesc = (_showingTranslated && _translatedDesc != null)
+        ? _translatedDesc!
+        : recipe.description;
+    final displayIngredients = (_showingTranslated && _translatedIngredients != null)
+        ? _translatedIngredients!
+        : recipe.ingredientsNeeded;
+    final displayInstructions = (_showingTranslated && _translatedInstructions != null)
+        ? _translatedInstructions!
+        : recipe.instructions;
+
     return ListView(
-      controller: controller,
+      controller: widget.controller,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
       children: [
         // Handle
@@ -232,16 +343,42 @@ class _RecipeDetailSheet extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Recipe name
-        Text(recipe.name,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(displayName,
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: _translating ? null : _translateAll,
+              icon: _translating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.translate_rounded, size: 18),
+              label: Text(
+                _translating
+                    ? t('explore_translating')
+                    : _showingTranslated
+                        ? t('explore_show_original')
+                        : t('explore_translate'),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
-        Text(recipe.description,
-            style:
-                TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+        Text(displayDesc,
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+        const SizedBox(height: 8),
+        _SourceChip(sourceName: recipe.sourceName, cs: cs),
         const SizedBox(height: 16),
 
         // Meta grid
@@ -279,7 +416,7 @@ class _RecipeDetailSheet extends StatelessWidget {
                 .titleMedium
                 ?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...recipe.ingredientsNeeded.map((ingredient) => Padding(
+        ...displayIngredients.map((ingredient) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +438,7 @@ class _RecipeDetailSheet extends StatelessWidget {
                 .titleMedium
                 ?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...recipe.instructions.asMap().entries.map((entry) {
+        ...displayInstructions.asMap().entries.map((entry) {
           final i = entry.key;
           final step = entry.value;
           return Padding(

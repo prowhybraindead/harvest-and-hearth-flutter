@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/recipe.dart';
+import 'translate_service.dart';
 
 // ── Value objects ──────────────────────────────────────────────────────────
 
@@ -11,11 +12,13 @@ class MealSummary {
   final String mealDbId;
   final String name;
   final String thumbnailUrl;
+  final String sourceName;
 
   const MealSummary({
     required this.mealDbId,
     required this.name,
     required this.thumbnailUrl,
+    required this.sourceName,
   });
 }
 
@@ -39,13 +42,32 @@ class RecipeSearchService {
   static final instance = RecipeSearchService._();
 
   static const _mealDbBase = 'https://www.themealdb.com/api/json/v1/1';
+  static const _dummyJsonBase = 'https://dummyjson.com';
   static const _ddgBase = 'https://api.duckduckgo.com/';
   static const _timeout = Duration(seconds: 15);
 
   // ── TheMealDB ─────────────────────────────────────────────────────────────
 
   /// Returns lightweight list of Vietnamese dishes (name + thumbnail only).
-  Future<List<MealSummary>> getVietnameseDishes() async {
+  Future<List<MealSummary>> getVietnameseDishes({
+    required String appLanguage,
+  }) async {
+    final mealDb = await _getVietnameseFromMealDb();
+    final dummy = await _getVietnameseFromDummyJson();
+    final combined = [...mealDb, ...dummy];
+
+    final dedup = <String, MealSummary>{};
+    for (final item in combined) {
+      dedup.putIfAbsent(item.name.toLowerCase().trim(), () => item);
+    }
+
+    final list = dedup.values.toList(growable: false);
+    if (appLanguage != 'VIE') return list;
+
+    return _translateSummariesToVietnamese(list);
+  }
+
+  Future<List<MealSummary>> _getVietnameseFromMealDb() async {
     final res = await http
         .get(Uri.parse('$_mealDbBase/filter.php?a=Vietnamese'))
         .timeout(_timeout);
@@ -57,8 +79,48 @@ class RecipeSearchService {
               mealDbId: m['idMeal'] as String,
               name: m['strMeal'] as String,
               thumbnailUrl: m['strMealThumb'] as String,
+            sourceName: 'TheMealDB',
             ))
         .toList();
+  }
+
+  Future<List<MealSummary>> _getVietnameseFromDummyJson() async {
+    final uri = Uri.parse('$_dummyJsonBase/recipes/search?q=vietnamese');
+    final res = await http.get(uri).timeout(_timeout);
+    if (res.statusCode != 200) return const [];
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    final rows = data['recipes'] as List? ?? const [];
+    return rows.map((r) {
+      final row = r as Map<String, dynamic>;
+      return MealSummary(
+        mealDbId: 'dj_${row['id']}',
+        name: (row['name'] as String? ?? '').trim(),
+        thumbnailUrl: (row['image'] as String? ?? '').trim(),
+        sourceName: 'DummyJSON',
+      );
+    }).where((e) => e.name.isNotEmpty).toList();
+  }
+
+  Future<List<MealSummary>> _translateSummariesToVietnamese(
+    List<MealSummary> items,
+  ) async {
+    final translated = <MealSummary>[];
+    for (final item in items) {
+      if (_looksVietnamese(item.name)) {
+        translated.add(item);
+        continue;
+      }
+      final vnName = await TranslateService.instance.translate(item.name, 'VIE');
+      translated.add(
+        MealSummary(
+          mealDbId: item.mealDbId,
+          name: vnName,
+          thumbnailUrl: item.thumbnailUrl,
+          sourceName: item.sourceName,
+        ),
+      );
+    }
+    return translated;
   }
 
   /// Full-text search on TheMealDB — returns complete [Recipe] objects.
@@ -69,11 +131,17 @@ class RecipeSearchService {
     if (res.statusCode != 200) throw Exception('TheMealDB ${res.statusCode}');
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     final meals = (data['meals'] as List? ?? []);
-    return meals.map((m) => _mealToRecipe(m as Map<String, dynamic>)).toList();
+    final results = meals
+      .map((m) => _mealToRecipe(m as Map<String, dynamic>))
+      .toList();
+    return results;
   }
 
   /// Fetch full meal details by TheMealDB id.
   Future<Recipe?> getMealById(String mealId) async {
+    if (mealId.startsWith('dj_')) {
+      return _getDummyRecipeById(mealId.substring(3));
+    }
     final uri = Uri.parse('$_mealDbBase/lookup.php?i=$mealId');
     final res = await http.get(uri).timeout(_timeout);
     if (res.statusCode != 200) return null;
@@ -81,6 +149,48 @@ class RecipeSearchService {
     final meals = data['meals'] as List?;
     if (meals == null || meals.isEmpty) return null;
     return _mealToRecipe(meals.first as Map<String, dynamic>);
+  }
+
+  Future<Recipe?> _getDummyRecipeById(String id) async {
+    final uri = Uri.parse('$_dummyJsonBase/recipes/$id');
+    final res = await http.get(uri).timeout(_timeout);
+    if (res.statusCode != 200) return null;
+    final row = jsonDecode(res.body) as Map<String, dynamic>;
+
+    final ingredients = List<String>.from(row['ingredients'] as List? ?? const []);
+    final instructions = List<String>.from(row['instructions'] as List? ?? const []);
+    final prep = (row['prepTimeMinutes'] as num?)?.toInt() ?? 10;
+    final cook = (row['cookTimeMinutes'] as num?)?.toInt() ?? 20;
+    final servings = (row['servings'] as num?)?.toInt() ?? 2;
+    final calories = (row['caloriesPerServing'] as num?)?.toInt() ?? 0;
+
+    final cuisine = (row['cuisine'] as String? ?? '').trim();
+    final desc = cuisine.isEmpty ? 'Vietnamese' : cuisine;
+
+    return Recipe(
+      id: 'dummy_$id',
+      name: (row['name'] as String? ?? 'Vietnamese Recipe').trim(),
+      description: desc,
+      difficulty: RecipeDifficulty.medium,
+      prepTime: prep,
+      cookTime: cook,
+      servings: servings,
+      calories: calories,
+      ingredientsNeeded: ingredients,
+      instructions: instructions,
+      sourceName: 'DummyJSON',
+      sourceUrl: 'https://dummyjson.com/recipes/$id',
+      imageKeyword: (row['image'] as String? ?? '').trim(),
+    );
+  }
+
+  bool _looksVietnamese(String text) {
+    final lower = text.toLowerCase();
+    return RegExp(r'[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]')
+            .hasMatch(lower) ||
+        lower.contains(' phở ') ||
+        lower.contains(' bún ') ||
+        lower.contains(' bánh ');
   }
 
   Recipe _mealToRecipe(Map<String, dynamic> m) {

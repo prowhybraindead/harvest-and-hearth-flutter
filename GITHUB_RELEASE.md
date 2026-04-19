@@ -1,13 +1,13 @@
 # Nội dung gợi ý cho GitHub Release
 
-Sao chép phần dưới khi tạo **Release** (tag gợi ý: `v1.0.16` hoặc `b0.4.4`).
+Sao chép phần dưới khi tạo **Release** (tag gợi ý: `v1.0.17` hoặc `b0.4.5`).
 
 ---
 
 ## Release title (tiêu đề)
 
 ```
-Harvest & Hearth b0.4.4 · Dashboard mới + AI Chat + fix Widget
+Harvest & Hearth b0.4.5 · Realtime Recipe + Notification Logs + Widget nâng cấp
 ```
 
 ---
@@ -15,24 +15,30 @@ Harvest & Hearth b0.4.4 · Dashboard mới + AI Chat + fix Widget
 ## Release notes (mô tả — Markdown)
 
 ```markdown
-## Harvest & Hearth `b0.4.4` · `1.0.16+17`
+## Harvest & Hearth `b0.4.5` · `1.0.17+18`
 
 ### Thêm mới
-- **Trang chủ thiết kế mới**: Lời chào theo thời gian, thẻ thống kê màu sắc, nút hành động nhanh, xem trước AI Chat.
-- **AI Chat công thức**: Trò chuyện nhiều lượt với AI Chef — hiểu nguyên liệu trong tủ, gợi ý prompt nhanh.
-- **Kho thực phẩm mới**: Tab Tủ lạnh/Ngăn đông, tìm kiếm, sắp xếp nhiều tiêu chí.
+- **Notification logs theo từng user (MongoDB)**: Lưu và truy vấn lịch sử thông báo (`title`, `message`, `type`, `isRead`, `createdAt`) qua backend API.
+- **Dashboard cập nhật theo góp ý**: Quét barcode trực tiếp từ Home và thêm khu vực gợi ý công thức theo thời gian thực.
+- **Recipe đa nguồn + dịch tiếng Việt**: Gộp dữ liệu từ TheMealDB + DummyJSON, dịch EN -> VI cho tên/mô tả/nguyên liệu/các bước nấu.
+- **Android Home Widget nâng cấp**: Thêm compact/ultra-compact mode, status chip, thời điểm cập nhật, nền đổi theo mức cảnh báo.
+
+### Cải tiến
+- **Màu cảnh báo trong Home** được làm dịu theo feedback để giảm chói.
+- **Card công thức hiển thị nguồn** (`TheMealDB`, `DummyJSON`, `AI Chef`) để minh bạch dữ liệu.
 
 ### Sửa lỗi
-- **Widget Android không tải được:** Fix lỗi xung đột `build.gradle` khiến widget class không tìm thấy.
+- **Barcode từ Dashboard**: Sửa điều hướng route không tồn tại, chuyển sang mở scanner trực tiếp.
+- **Stability/lint fixes**: Sửa lỗi regex literal và tham số notification icon để bản release sạch analyzer.
 
 ### Build
-- **1.0.16** (`versionCode` **17**).
+- **1.0.17** (`versionCode` **18**).
 
 ### Backend
-- Không đổi API — xem `server/README.md`.
+- Có cập nhật API notifications — xem `server/README.md` và `server/src/index.js`.
 
 ### APK
-- `app-release.apk` · `harvestnhearth-b0.4.4.apk`
+- `app-release.apk` · `harvestnhearth-b0.4.5.apk`
 
 ### Changelog
 [Xem CHANGELOG.md](https://github.com/prowhybraindead/harvest-and-hearth-flutter/blob/main/CHANGELOG.md)
@@ -45,11 +51,11 @@ Harvest & Hearth b0.4.4 · Dashboard mới + AI Chat + fix Widget
 | File | Đường dẫn sau `flutter build apk --release` |
 | --- | --- |
 | `app-release.apk` | `build/app/outputs/flutter-apk/app-release.apk` |
-| `harvestnhearth-b0.4.4.apk` | `build/app/outputs/flutter-apk/harvestnhearth-b0.4.4.apk` |
+| `harvestnhearth-b0.4.5.apk` | `build/app/outputs/flutter-apk/harvestnhearth-b0.4.5.apk` |
 
 ---
 
 ## Gợi ý tag
 
-- **Semver:** `v1.0.16`
-- **Nhãn:** `b0.4.4`
+- **Semver:** `v1.0.17`
+- **Nhãn:** `b0.4.5`

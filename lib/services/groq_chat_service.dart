@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -9,6 +10,8 @@ import '../models/food_item.dart';
 const _uuid = Uuid();
 const _groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
 const _model = 'llama-3.3-70b-versatile';
+const _requestTimeout = Duration(seconds: 30);
+const _maxHistoryMessages = 16;
 
 /// Chat service using Groq API with conversation history support.
 /// Maintains context about the user's fridge inventory.
@@ -25,6 +28,12 @@ class GroqChatService {
   List<ChatMessage> get history => List.unmodifiable(_history);
 
   void clearHistory() => _history.clear();
+
+  void _trimHistory() {
+    if (_history.length <= _maxHistoryMessages) return;
+    final overflow = _history.length - _maxHistoryMessages;
+    _history.removeRange(0, overflow);
+  }
 
   /// System prompt with optional inventory context.
   String _buildSystemPrompt(String language, List<FoodItem> inventory) {
@@ -101,6 +110,7 @@ Rules:
       timestamp: DateTime.now(),
     );
     _history.add(userMsg);
+    _trimHistory();
 
     // Build messages for API
     final systemPrompt = _buildSystemPrompt(language, inventory);
@@ -109,19 +119,23 @@ Rules:
       ..._history.map((m) => m.toApiMap()),
     ];
 
-    final response = await http.post(
-      Uri.parse(_groqEndpoint),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': _model,
-        'messages': apiMessages,
-        'temperature': 0.8,
-        'max_tokens': 2048,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse(_groqEndpoint),
+          headers: {
+            'Authorization': 'Bearer $_apiKey',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'model': _model,
+            'messages': apiMessages,
+            'temperature': 0.8,
+            'max_tokens': 2048,
+          }),
+        )
+        .timeout(_requestTimeout, onTimeout: () {
+          throw TimeoutException('Groq request timed out');
+        });
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -140,6 +154,7 @@ Rules:
       timestamp: DateTime.now(),
     );
     _history.add(assistantMsg);
+    _trimHistory();
 
     return assistantMsg;
   }

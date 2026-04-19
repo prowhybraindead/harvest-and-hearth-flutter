@@ -3,7 +3,7 @@
     android:description="@string/widget_description"
     android:initialLayout="@layout/harvest_widget"
     android:minWidth="260dp"
-    android:minHeight="110dp"
+    android:minHeight="100dp"
     android:previewImage="@mipmap/ic_launcher"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"

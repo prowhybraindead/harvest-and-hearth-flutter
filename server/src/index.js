@@ -11,7 +11,7 @@ import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import { verifyToken } from '@clerk/backend';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 const PORT = Number(process.env.PORT) || Number(process.env.SERVER_PORT) || 25165;
 const MONGODB_URI = process.env.MONGODB_URI || '';
@@ -46,6 +46,9 @@ function foodItems() {
 }
 function savedRecipes() {
   return db.collection('saved_recipes');
+}
+function notifications() {
+  return db.collection('notifications');
 }
 
 async function clerkAuth(req, res, next) {
@@ -247,6 +250,85 @@ app.delete('/api/v1/saved-recipes/:originalId', clerkAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Notifications log ───────────────────────────────────────────────────────
+app.get('/api/v1/notifications', clerkAuth, async (req, res) => {
+  const uid = req.userId;
+  const rows = await notifications()
+    .find({ userId: uid })
+    .sort({ createdAtTs: -1 })
+    .limit(100)
+    .toArray();
+
+  res.json(
+    rows.map((r) => ({
+      id: r._id?.toString?.() ?? null,
+      userId: r.userId,
+      title: r.title,
+      message: r.message,
+      type: r.type,
+      isRead: Boolean(r.isRead),
+      createdAt: r.createdAt,
+    })),
+  );
+});
+
+app.post('/api/v1/notifications', clerkAuth, async (req, res) => {
+  const uid = req.userId;
+  const body = req.body || {};
+  const title = String(body.title || '').trim();
+  const message = String(body.message || '').trim();
+  const type = String(body.type || 'expiry').trim();
+
+  if (!title || !message) {
+    return res.status(400).json({ error: 'title and message required' });
+  }
+
+  const now = new Date();
+  const createdAt = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+  const doc = {
+    userId: uid,
+    title,
+    message,
+    type,
+    isRead: false,
+    createdAt,
+    createdAtTs: now,
+  };
+
+  const result = await notifications().insertOne(doc);
+  res.status(201).json({
+    id: result.insertedId.toString(),
+    userId: doc.userId,
+    title: doc.title,
+    message: doc.message,
+    type: doc.type,
+    isRead: doc.isRead,
+    createdAt: doc.createdAt,
+  });
+});
+
+app.patch('/api/v1/notifications/:id/read', clerkAuth, async (req, res) => {
+  const uid = req.userId;
+  const { id } = req.params;
+  const body = req.body || {};
+  const isRead = 'isRead' in body ? Boolean(body.isRead) : true;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ error: 'Invalid notification id' });
+  }
+
+  const result = await notifications().updateOne(
+    { _id: new ObjectId(id), userId: uid },
+    { $set: { isRead } },
+  );
+
+  if (result.matchedCount === 0) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  res.json({ ok: true });
+});
+
 async function main() {
   await connectMongo();
   await foodItems().createIndex({ user_id: 1 });
@@ -256,6 +338,8 @@ async function main() {
     { user_id: 1, original_id: 1 },
     { unique: true },
   );
+  await notifications().createIndex({ userId: 1, createdAtTs: -1 });
+  await notifications().createIndex({ userId: 1, isRead: 1, createdAtTs: -1 });
 
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Harvest & Hearth API] Server listening on 0.0.0.0:${PORT}`);

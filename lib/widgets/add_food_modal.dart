@@ -13,8 +13,13 @@ const _uuid = Uuid();
 class AddFoodModal extends StatefulWidget {
   /// If provided, the modal opens in edit mode pre-filled with this item.
   final FoodItem? editItem;
+  final String? initialScannedName;
 
-  const AddFoodModal({super.key, this.editItem});
+  const AddFoodModal({
+    super.key,
+    this.editItem,
+    this.initialScannedName,
+  });
 
   bool get _isEdit => editItem != null;
 
@@ -47,6 +52,10 @@ class _AddFoodModalState extends State<AddFoodModal> {
       _storage = e.storage;
       _expiryDate = e.expiryDate;
     } else {
+      final scanned = widget.initialScannedName?.trim();
+      if (scanned != null && scanned.isNotEmpty) {
+        _nameCtrl.text = scanned;
+      }
       _quantityCtrl.text = '1';
       _unitCtrl.text = 'pcs';
       _warningDaysCtrl.text = '3';

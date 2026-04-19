@@ -6,7 +6,9 @@ import '../providers/app_provider.dart';
 
 /// Full-screen AI chat conversation with the AI Chef.
 class AiChatScreen extends StatefulWidget {
-  const AiChatScreen({super.key});
+  const AiChatScreen({super.key, this.initialPrompt});
+
+  final String? initialPrompt;
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -16,6 +18,19 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialPrompt?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      _inputController.text = initial;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _focusNode.requestFocus();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -51,6 +66,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<void> _sendQuickPrompt(String prompt) async {
     _focusNode.unfocus();
     await context.read<AppProvider>().sendChatMessage(prompt);
+    _scrollToBottom();
+  }
+
+  Future<void> _retryLastMessage() async {
+    await context.read<AppProvider>().retryLastChatMessage();
     _scrollToBottom();
   }
 
@@ -168,19 +188,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
               error: provider.chatError!,
               t: t,
               cs: cs,
-              onRetry: () => _sendQuickPrompt(
-                provider.chatMessages
-                    .lastWhere(
-                      (m) => m.role == ChatRole.user,
-                      orElse: () => ChatMessage(
-                        id: '',
-                        role: ChatRole.user,
-                        content: '',
-                        timestamp: DateTime.now(),
-                      ),
-                    )
-                    .content,
-              ),
+              canRetry: provider.canRetryLastChat,
+              onRetry: _retryLastMessage,
             ),
 
           // Input area
@@ -550,13 +559,25 @@ class _ErrorBanner extends StatelessWidget {
   final String Function(String) t;
   final ColorScheme cs;
   final VoidCallback onRetry;
+  final bool canRetry;
 
   const _ErrorBanner({
     required this.error,
     required this.t,
     required this.cs,
     required this.onRetry,
+    required this.canRetry,
   });
+
+  String _displayMessage() {
+    if (error == 'timeout') {
+      return '${t('chat_error')} (timeout)';
+    }
+    if (error == 'api_key_missing') {
+      return '${t('chat_error')} (API key)';
+    }
+    return t('chat_error');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -573,7 +594,7 @@ class _ErrorBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              t('chat_error'),
+              _displayMessage(),
               style: TextStyle(
                 fontSize: 13,
                 color: cs.onErrorContainer,
@@ -581,7 +602,7 @@ class _ErrorBanner extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: onRetry,
+            onPressed: canRetry ? onRetry : null,
             child: Text(
               t('common_retry'),
               style: TextStyle(color: cs.error, fontSize: 13),

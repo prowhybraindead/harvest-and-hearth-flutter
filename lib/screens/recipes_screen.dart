@@ -306,8 +306,9 @@ class _ExploreTabState extends State<_ExploreTab>
 
   Future<void> _loadVietnameseDishes() async {
     try {
-      final dishes =
-          await RecipeSearchService.instance.getVietnameseDishes();
+      final dishes = await RecipeSearchService.instance.getVietnameseDishes(
+        appLanguage: widget.provider.language,
+      );
       if (mounted) setState(() => _vietnameseDishes = dishes);
     } catch (_) {
       if (mounted) setState(() => _loadError = widget.provider.t('explore_load_error'));
@@ -333,13 +334,40 @@ class _ExploreTabState extends State<_ExploreTab>
           .catchError((_) => <DdgResult>[]),
     ]);
 
+    var mealDbResults = futures[0] as List<Recipe>;
+    if (widget.provider.language == 'VIE') {
+      mealDbResults = await _translateRecipesToVietnamese(mealDbResults);
+    }
+
     if (mounted) {
       setState(() {
-        _mealDbResults = futures[0] as List<Recipe>;
+        _mealDbResults = mealDbResults;
         _ddgResults = futures[1] as List<DdgResult>;
         _searching = false;
       });
     }
+  }
+
+  Future<List<Recipe>> _translateRecipesToVietnamese(List<Recipe> recipes) async {
+    final translated = <Recipe>[];
+    for (final r in recipes) {
+      final shouldTranslate = _looksEnglish(r.name) || _looksEnglish(r.description);
+      if (!shouldTranslate) {
+        translated.add(r);
+        continue;
+      }
+      final values = await Future.wait([
+        TranslateService.instance.translate(r.name, 'VIE'),
+        TranslateService.instance.translate(r.description, 'VIE'),
+      ]);
+      translated.add(r.copyWith(name: values[0], description: values[1]));
+    }
+    return translated;
+  }
+
+  bool _looksEnglish(String value) {
+    return RegExp(r'^[A-Za-z0-9\s\-,.():;/]+$').hasMatch(value.trim()) &&
+        value.trim().isNotEmpty;
   }
 
   void _clearSearch() {
@@ -578,6 +606,23 @@ class _MealSummaryCardState extends State<_MealSummaryCard> {
                           fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer.withAlpha(160),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.summary.sourceName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       t('explore_tap_for_details'),
                       style: TextStyle(
@@ -629,6 +674,14 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
   bool _translating = false;
   bool _showingTranslated = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.provider.language == 'VIE' && _looksEnglishRecipe(widget.recipe)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _translate());
+    }
+  }
+
   Future<void> _translate() async {
     if (_translatedName != null) {
       setState(() => _showingTranslated = !_showingTranslated);
@@ -648,6 +701,12 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
         _translating = false;
       });
     }
+  }
+
+  bool _looksEnglishRecipe(Recipe recipe) {
+    final text = '${recipe.name} ${recipe.description}'.trim();
+    if (text.isEmpty) return false;
+    return RegExp(r'^[A-Za-z0-9\s\-,.():;/]+$').hasMatch(text);
   }
 
   @override

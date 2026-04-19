@@ -10,6 +10,7 @@ import '../models/food_item.dart';
 class HomeWidgetService {
   HomeWidgetService._();
   static final HomeWidgetService instance = HomeWidgetService._();
+  static const _line2MaxChars = 72;
 
   Future<void> update(List<FoodItem> items, String language) async {
     if (!Platform.isAndroid) return;
@@ -27,9 +28,16 @@ class HomeWidgetService {
       ...expired.map((e) => e.name),
       ...expiring.map((e) => e.name),
     ];
-    final line2 = names.take(4).join(', ');
+    final uniqueNames = names.toSet().toList(growable: false);
+    final line2 = uniqueNames.take(4).join(', ');
     final line2Short =
-        line2.isEmpty ? Translations.get('widget_all_ok', lang) : line2;
+        line2.isEmpty ? Translations.get('widget_all_ok', lang) : _shorten(line2);
+    final statusText = _statusText(
+      language: lang,
+      expiringCount: expiring.length,
+      expiredCount: expired.length,
+    );
+    final updatedAt = _updatedAtText(lang);
 
     try {
       await HomeWidget.saveWidgetData<String>('line1', line1);
@@ -47,6 +55,8 @@ class HomeWidgetService {
         'subtitle',
         Translations.get('widget_subtitle', lang),
       );
+      await HomeWidget.saveWidgetData<String>('status_text', statusText);
+      await HomeWidget.saveWidgetData<String>('updated_at', updatedAt);
       await HomeWidget.saveWidgetData<String>('line2', line2Short);
       await HomeWidget.updateWidget(
         androidName: 'HarvestWidgetProvider',
@@ -67,6 +77,8 @@ class HomeWidgetService {
       await HomeWidget.saveWidgetData<String>('label_expiring', '');
       await HomeWidget.saveWidgetData<String>('label_expired', '');
       await HomeWidget.saveWidgetData<String>('subtitle', '');
+      await HomeWidget.saveWidgetData<String>('status_text', '');
+      await HomeWidget.saveWidgetData<String>('updated_at', '');
       await HomeWidget.saveWidgetData<String>('line2', '');
       await HomeWidget.updateWidget(
         androidName: 'HarvestWidgetProvider',
@@ -76,5 +88,36 @@ class HomeWidgetService {
     } catch (e, st) {
       debugPrint('HomeWidgetService.clear: $e\n$st');
     }
+  }
+
+  String _shorten(String text) {
+    if (text.length <= _line2MaxChars) return text;
+    return '${text.substring(0, _line2MaxChars - 1)}...';
+  }
+
+  String _statusText({
+    required String language,
+    required int expiringCount,
+    required int expiredCount,
+  }) {
+    if (expiredCount > 0) {
+      return Translations.get('widget_status_danger', language)
+          .replaceAll('{count}', '$expiredCount');
+    }
+    if (expiringCount > 0) {
+      return Translations.get('widget_status_warning', language)
+          .replaceAll('{count}', '$expiringCount');
+    }
+    return Translations.get('widget_status_safe', language);
+  }
+
+  String _updatedAtText(String language) {
+    final now = DateTime.now();
+    final hh = now.hour.toString().padLeft(2, '0');
+    final mm = now.minute.toString().padLeft(2, '0');
+    final dd = now.day.toString().padLeft(2, '0');
+    final mon = now.month.toString().padLeft(2, '0');
+    final prefix = Translations.get('widget_updated_prefix', language);
+    return '$prefix $hh:$mm · $dd/$mon';
   }
 }

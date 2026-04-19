@@ -1,7 +1,7 @@
 name: harvest_and_hearth
 description: Ứng dụng quản lý thực phẩm thông minh với gợi ý công thức nấu ăn từ AI.
 publish_to: 'none'
-version: 1.0.16+17
+version: 1.0.17+18
 
 environment:
   sdk: '>=3.6.2 <4.0.0'
