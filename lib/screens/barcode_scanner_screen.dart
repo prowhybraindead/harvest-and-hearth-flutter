@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../theme/app_theme.dart';
+
 /// Full-screen barcode & QR scanner. Pops with the first non-empty [String] value.
 class BarcodeScannerScreen extends StatefulWidget {
   const BarcodeScannerScreen({super.key, required this.t});
@@ -46,12 +48,13 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   @override
   Widget build(BuildContext context) {
     final t = widget.t;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         title: Text(t('food_scan_title')),
-        backgroundColor: Colors.black87,
+        backgroundColor: const Color(0xFF050505),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -63,18 +66,19 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               }
               final on = state.torchState == TorchState.on ||
                   state.torchState == TorchState.auto;
-              return IconButton(
+              return _ScannerActionIcon(
                 tooltip: t('food_scan_torch'),
-                onPressed: () => _controller.toggleTorch(),
-                icon: Icon(on ? Icons.flash_on_rounded : Icons.flash_off_rounded),
+                icon: on ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                onTap: () => _controller.toggleTorch(),
               );
             },
           ),
-          IconButton(
+          _ScannerActionIcon(
             tooltip: t('food_cancel'),
-            onPressed: () => Navigator.of(context).pop<String?>(),
-            icon: const Icon(Icons.close_rounded),
+            icon: Icons.close_rounded,
+            onTap: () => Navigator.of(context).pop<String?>(),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Stack(
@@ -90,19 +94,71 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               onClose: () => Navigator.of(context).pop<String?>(),
             ),
           ),
-          Align(
-            alignment: Alignment.bottomCenter,
+          IgnorePointer(
             child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
+                    Colors.black.withValues(alpha: 0.45),
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.85),
+                    Colors.black.withValues(alpha: 0.62),
                   ],
+                  stops: const [0.0, 0.4, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Container(
+              width: 248,
+              height: 248,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadii.lg),
+                border: Border.all(
+                  color: cs.primary.withValues(alpha: 0.95),
+                  width: 2.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.secondary.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  margin: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cs.secondary.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.center_focus_strong_rounded,
+                    color: Colors.black,
+                    size: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A0A0A).withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(AppRadii.lg),
+                border: Border.all(
+                  color: cs.secondary.withValues(alpha: 0.7),
+                  width: 1.25,
                 ),
               ),
               child: Text(
@@ -122,6 +178,45 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   }
 }
 
+class _ScannerActionIcon extends StatelessWidget {
+  const _ScannerActionIcon({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: cs.secondary.withValues(alpha: 0.7),
+              ),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ScanErrorMessage extends StatelessWidget {
   const _ScanErrorMessage({
     required this.message,
@@ -135,32 +230,41 @@ class _ScanErrorMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ColoredBox(
       color: Colors.black,
       child: SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.videocam_off_outlined,
-                  size: 64,
-                  color: Colors.grey.shade400,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade300, fontSize: 15),
-                ),
-                const SizedBox(height: 24),
-                FilledButton.tonal(
-                  onPressed: onClose,
-                  child: Text(buttonLabel),
-                ),
-              ],
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF101010),
+                borderRadius: BorderRadius.circular(AppRadii.lg),
+                border: Border.all(color: cs.secondary.withValues(alpha: 0.6)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.videocam_off_outlined,
+                    size: 62,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade300, fontSize: 15),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.tonal(
+                    onPressed: onClose,
+                    child: Text(buttonLabel),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

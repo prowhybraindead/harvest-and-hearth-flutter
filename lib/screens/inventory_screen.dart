@@ -24,7 +24,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _searchCtrl.addListener(() {
       setState(() => _query = _searchCtrl.text.toLowerCase());
     });
@@ -75,109 +75,182 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget build(BuildContext context) {
     // Use select to avoid rebuilding when unrelated provider fields change
     // (e.g. recipeCache, savedRecipes)
-    final fridgeItems = context.select<AppProvider, List<FoodItem>>(
-        (p) => p.fridgeItems);
-    final freezerItems = context.select<AppProvider, List<FoodItem>>(
-        (p) => p.freezerItems);
-    final language =
-        context.select<AppProvider, String>((p) => p.language);
-    final t = context.select<AppProvider, String Function(String)>(
-        (p) => p.t);
+    final fridgeItems =
+        context.select<AppProvider, List<FoodItem>>((p) => p.fridgeItems);
+    final freezerItems =
+        context.select<AppProvider, List<FoodItem>>((p) => p.freezerItems);
+    final pantryItems =
+        context.select<AppProvider, List<FoodItem>>((p) => p.pantryItems);
+    final language = context.select<AppProvider, String>((p) => p.language);
+    final t = context.select<AppProvider, String Function(String)>((p) => p.t);
+    final cs = Theme.of(context).colorScheme;
 
     final filteredFridge = _filter(fridgeItems);
     final filteredFreezer = _filter(freezerItems);
+    final filteredPantry = _filter(pantryItems);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(t('inventory_title'),
             style: const TextStyle(fontWeight: FontWeight.bold)),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
+          preferredSize: const Size.fromHeight(152),
           child: Column(
             children: [
               // Search bar
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: TextField(
-                  controller: _searchCtrl,
-                  decoration: InputDecoration(
-                    hintText: t('inventory_search'),
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              setState(() => _query = '');
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest.withAlpha(110),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: cs.outlineVariant.withAlpha(110),
                     ),
-                    filled: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    decoration: InputDecoration(
+                      hintText: t('inventory_search'),
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _query.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _query = '');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      filled: false,
+                    ),
                   ),
                 ),
               ),
               // Sort chips + Tabs
-              Row(
-                children: [
-                  Expanded(
-                    child: TabBar(
-                      controller: _tabController,
-                      tabs: [
-                        Tab(
-                          icon: const Icon(Icons.kitchen_rounded, size: 18),
-                          text: t('inventory_fridge'),
-                        ),
-                        Tab(
-                          icon: const Icon(Icons.ac_unit_rounded, size: 18),
-                          text: t('inventory_freezer'),
-                        ),
-                      ],
-                    ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    color: cs.surfaceContainerHighest.withAlpha(85),
+                    border: Border.all(color: cs.outlineVariant.withAlpha(95)),
                   ),
-                  PopupMenuButton<_SortBy>(
-                    icon: const Icon(Icons.sort_rounded),
-                    onSelected: (v) => setState(() => _sortBy = v),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: _SortBy.name,
-                        child: Text(t('inventory_sort_name')),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TabBar(
+                          controller: _tabController,
+                          dividerColor: Colors.transparent,
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          labelPadding: EdgeInsets.zero,
+                          indicator: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: cs.secondary.withAlpha(34),
+                            border: Border.all(
+                              color: cs.secondary.withAlpha(120),
+                            ),
+                          ),
+                          tabs: [
+                            SizedBox(
+                              height: 54,
+                              child: Tab(
+                                icon:
+                                    const Icon(Icons.kitchen_rounded, size: 18),
+                                text: t('inventory_fridge'),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 54,
+                              child: Tab(
+                                icon:
+                                    const Icon(Icons.ac_unit_rounded, size: 18),
+                                text: t('inventory_freezer'),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 54,
+                              child: Tab(
+                                icon: const Icon(Icons.inventory_2_rounded,
+                                    size: 18),
+                                text: t('inventory_pantry'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      PopupMenuItem(
-                        value: _SortBy.expiry,
-                        child: Text(t('inventory_sort_expiry')),
-                      ),
-                      PopupMenuItem(
-                        value: _SortBy.added,
-                        child: Text(t('inventory_sort_added')),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<_SortBy>(
+                        tooltip: t('inventory_sort_expiry'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: cs.primary.withAlpha(24),
+                            border: Border.all(color: cs.primary.withAlpha(90)),
+                          ),
+                          child: Icon(Icons.sort_rounded,
+                              color: cs.primary, size: 18),
+                        ),
+                        onSelected: (v) => setState(() => _sortBy = v),
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: _SortBy.name,
+                            child: Text(t('inventory_sort_name')),
+                          ),
+                          PopupMenuItem(
+                            value: _SortBy.expiry,
+                            child: Text(t('inventory_sort_expiry')),
+                          ),
+                          PopupMenuItem(
+                            value: _SortBy.added,
+                            child: Text(t('inventory_sort_added')),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
+              const SizedBox(height: 4),
             ],
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _ItemList(
-            items: filteredFridge,
-            t: t,
-            language: language,
-            onEdit: (item) => _openEdit(context, item),
-          ),
-          _ItemList(
-            items: filteredFreezer,
-            t: t,
-            language: language,
-            onEdit: (item) => _openEdit(context, item),
-          ),
-        ],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        child: TabBarView(
+          key: ValueKey('${_tabController.index}-$_query-${_sortBy.name}'),
+          controller: _tabController,
+          children: [
+            _ItemList(
+              items: filteredFridge,
+              t: t,
+              language: language,
+              onEdit: (item) => _openEdit(context, item),
+            ),
+            _ItemList(
+              items: filteredFreezer,
+              t: t,
+              language: language,
+              onEdit: (item) => _openEdit(context, item),
+            ),
+            _ItemList(
+              items: filteredPantry,
+              t: t,
+              language: language,
+              onEdit: (item) => _openEdit(context, item),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -204,8 +277,7 @@ class _ItemList extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.kitchen_outlined,
-                size: 64,
-                color: Theme.of(context).colorScheme.outlineVariant),
+                size: 64, color: Theme.of(context).colorScheme.outlineVariant),
             const SizedBox(height: 16),
             Text(t('inventory_empty'),
                 style: Theme.of(context).textTheme.titleMedium),
@@ -218,7 +290,7 @@ class _ItemList extends StatelessWidget {
       );
     }
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
       itemCount: items.length,
       itemBuilder: (_, i) => FoodItemCard(
         item: items[i],

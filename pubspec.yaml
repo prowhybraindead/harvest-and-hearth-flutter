@@ -1,7 +1,7 @@
 name: harvest_and_hearth
 description: Ứng dụng quản lý thực phẩm thông minh với gợi ý công thức nấu ăn từ AI.
 publish_to: 'none'
-version: 1.0.17+18
+version: 1.0.26+27
 
 environment:
   sdk: '>=3.6.2 <4.0.0'
@@ -25,6 +25,8 @@ dependencies:
   timezone: ^0.10.0
   flutter_timezone: ^4.1.0
   home_widget: ^0.7.0+1
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -44,3 +46,4 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - public/hearthie/hearthie.png

@@ -1,6 +1,6 @@
 import '../core/simulated_clock.dart';
 
-enum StorageType { fridge, freezer }
+enum StorageType { fridge, freezer, pantry }
 
 enum FoodCategory {
   vegetables,
@@ -15,14 +15,14 @@ enum FoodCategory {
 
 extension StorageTypeX on StorageType {
   String get value => name;
-  static StorageType fromString(String v) =>
-      StorageType.values.firstWhere((e) => e.name == v, orElse: () => StorageType.fridge);
+  static StorageType fromString(String v) => StorageType.values
+      .firstWhere((e) => e.name == v, orElse: () => StorageType.fridge);
 }
 
 extension FoodCategoryX on FoodCategory {
   String get value => name;
-  static FoodCategory fromString(String v) =>
-      FoodCategory.values.firstWhere((e) => e.name == v, orElse: () => FoodCategory.other);
+  static FoodCategory fromString(String v) => FoodCategory.values
+      .firstWhere((e) => e.name == v, orElse: () => FoodCategory.other);
 }
 
 class FoodItem {
@@ -35,6 +35,9 @@ class FoodItem {
   final DateTime addedDate;
   final DateTime? expiryDate;
   final int? warningDays;
+  final bool fromShoppingPlan;
+  final List<String> shoppingPlanMealNames;
+  final String? planSourceLabel;
 
   const FoodItem({
     required this.id,
@@ -46,6 +49,9 @@ class FoodItem {
     required this.addedDate,
     this.expiryDate,
     this.warningDays,
+    this.fromShoppingPlan = false,
+    this.shoppingPlanMealNames = const [],
+    this.planSourceLabel,
   });
 
   FoodItem copyWith({
@@ -58,6 +64,9 @@ class FoodItem {
     DateTime? addedDate,
     DateTime? expiryDate,
     int? warningDays,
+    bool? fromShoppingPlan,
+    List<String>? shoppingPlanMealNames,
+    String? planSourceLabel,
   }) {
     return FoodItem(
       id: id ?? this.id,
@@ -69,6 +78,9 @@ class FoodItem {
       addedDate: addedDate ?? this.addedDate,
       expiryDate: expiryDate ?? this.expiryDate,
       warningDays: warningDays ?? this.warningDays,
+      fromShoppingPlan: fromShoppingPlan ?? this.fromShoppingPlan,
+      shoppingPlanMealNames: shoppingPlanMealNames ?? this.shoppingPlanMealNames,
+      planSourceLabel: planSourceLabel ?? this.planSourceLabel,
     );
   }
 
@@ -82,6 +94,9 @@ class FoodItem {
         'addedDate': addedDate.toIso8601String(),
         'expiryDate': expiryDate?.toIso8601String(),
         'warningDays': warningDays,
+        'fromShoppingPlan': fromShoppingPlan,
+        'shoppingPlanMealNames': shoppingPlanMealNames,
+        'planSourceLabel': planSourceLabel,
       };
 
   /// Reads a row from the REST API (snake_case column names).
@@ -97,6 +112,11 @@ class FoodItem {
             ? DateTime.parse(row['expiry_date'] as String)
             : null,
         warningDays: row['warning_days'] as int?,
+        fromShoppingPlan: row['from_shopping_plan'] as bool? ?? false,
+        shoppingPlanMealNames: List<String>.from(
+          row['shopping_plan_meal_names'] as List? ?? const [],
+        ),
+        planSourceLabel: row['plan_source_label'] as String?,
       );
 
   factory FoodItem.fromJson(Map<String, dynamic> json) => FoodItem(
@@ -111,6 +131,11 @@ class FoodItem {
             ? DateTime.parse(json['expiryDate'] as String)
             : null,
         warningDays: json['warningDays'] as int?,
+        fromShoppingPlan: json['fromShoppingPlan'] as bool? ?? false,
+        shoppingPlanMealNames: List<String>.from(
+          json['shoppingPlanMealNames'] as List? ?? const [],
+        ),
+        planSourceLabel: json['planSourceLabel'] as String?,
       );
 
   /// Returns days until expiry. Negative = already expired. Null = no expiry set.
@@ -118,7 +143,8 @@ class FoodItem {
     if (expiryDate == null) return null;
     final now = SimulatedClock.now;
     final today = DateTime(now.year, now.month, now.day);
-    final expiry = DateTime(expiryDate!.year, expiryDate!.month, expiryDate!.day);
+    final expiry =
+        DateTime(expiryDate!.year, expiryDate!.month, expiryDate!.day);
     return expiry.difference(today).inDays;
   }
 

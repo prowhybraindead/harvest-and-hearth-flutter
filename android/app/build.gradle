@@ -7,7 +7,7 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
-// Nhãn b0.x.x mới nhất trong CHANGELOG.md (mục ## [b0.x.x] cuối file).
+// Nhãn b0.x.x mới nhất trong CHANGELOG.md (mục đầu tiên theo thứ tự mới -> cũ).
 def getChangelogLabel() {
     def changelogFile = file("${rootProject.projectDir.parentFile}/CHANGELOG.md")
     if (!changelogFile.exists()) {
@@ -15,11 +15,7 @@ def getChangelogLabel() {
     }
     def text = changelogFile.getText("UTF-8")
     def matcher = text =~ /## \[(b0\.\d+\.\d+)\]/
-    def labels = []
-    while (matcher.find()) {
-        labels.add(matcher.group(1))
-    }
-    return labels.isEmpty() ? "b0.0.0" : labels.last()
+    return matcher.find() ? matcher.group(1) : "b0.0.0"
 }
 
 def changelogLabel = getChangelogLabel()

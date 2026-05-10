@@ -1,5 +1,37 @@
 enum RecipeDifficulty { easy, medium, hard }
 
+List<String> normalizeRecipeInstructions(List<String> raw) {
+  final out = <String>[];
+  final seen = <String>{};
+
+  for (final row in raw) {
+    var s = row.trim();
+    if (s.isEmpty) continue;
+
+    // Drop standalone "step 1", "bước 2", "2.", "(3)" lines.
+    final lower = s.toLowerCase();
+    if (RegExp(r'^(step|bước)\s*\d+[:.)-]?\s*$').hasMatch(lower) ||
+        RegExp(r'^\(?\d+\)?[.)-]?\s*$').hasMatch(lower)) {
+      continue;
+    }
+
+    // Remove step prefixes inside a real sentence.
+    s = s.replaceFirst(
+      RegExp(r'^\s*(step|bước)\s*\d+\s*[:.)-]?\s*', caseSensitive: false),
+      '',
+    );
+    s = s.replaceFirst(RegExp(r'^\s*\(?\d+\)?[.)-]\s*'), '');
+    s = s.trim();
+    if (s.isEmpty) continue;
+
+    final key = s.toLowerCase();
+    if (seen.add(key)) {
+      out.add(s);
+    }
+  }
+  return out;
+}
+
 extension RecipeDifficultyX on RecipeDifficulty {
   String get value => name;
 
@@ -114,7 +146,9 @@ class Recipe {
         servings: (json['servings'] as num).toInt(),
         calories: (json['calories'] as num).toInt(),
         ingredientsNeeded: List<String>.from(json['ingredientsNeeded'] as List),
-        instructions: List<String>.from(json['instructions'] as List),
+        instructions: normalizeRecipeInstructions(
+          List<String>.from(json['instructions'] as List),
+        ),
         sourceName: json['sourceName'] as String,
         sourceUrl: json['sourceUrl'] as String? ?? '',
         imageKeyword: json['imageKeyword'] as String? ?? '',

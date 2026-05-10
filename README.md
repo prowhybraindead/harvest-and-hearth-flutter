@@ -36,9 +36,11 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 | --- | --- |
 | **Kho thực phẩm** | Tủ lạnh / Ngăn đông, tìm kiếm, sắp xếp, xem & chỉnh sửa. **Quét mã vạch / QR** bằng camera (đèn flash). |
 | **Cảnh báo hết hạn** | Gom mặt hàng hết hạn & sắp hết hạn trên trang chủ; **thông báo định kỳ** (Android ~9:00); **widget** (Android — thêm thủ công từ màn hình chính). **Nút mô phỏng thời gian** (góc trái) để test thông báo; tắt bằng `ENABLE_TIME_SIMULATOR=false` trong `.env` khi build. |
-| **AI Chef** | **Chat nhiều lượt** với AI — hiểu nguyên liệu trong tủ, gợi ý món theo tình trạng thực phẩm. Nhanh với prompt sẵn. Groq (Llama 3.3) gợi ý 3 công thức; fallback **Gemini** nếu Groq lỗi. |
+| **Hearthie (AI)** | **Chat nhiều lượt** với Hearthie — hiểu nguyên liệu trong tủ, gợi ý món theo tình trạng thực phẩm, hỗ trợ quick prompts (meal plan, leftovers, shopping list). Chat dùng Groq `openai/gpt-oss-120b`; luồng gợi ý công thức dùng Groq recipe model và fallback **Gemini** khi cần. |
 | **Khám phá** | Món Việt Nam (TheMealDB), tìm kiếm TheMealDB + DuckDuckGo, lưu công thức. |
 | **Dịch** | Dịch tên/mô tả công thức theo ngôn ngữ đang dùng. |
+| **Weather banner** | Dashboard hiển thị thời tiết theo vị trí người dùng (ưu tiên GPS, fallback IP) qua Open-Meteo; UI banner tối ưu theo ngữ cảnh ngày/đêm/mưa. |
+| **Notification Center** | Ghi log thông báo theo user lên MongoDB (`expiry_summary`, `expiry_urgent`, `expiry_test`), hỗ trợ xem danh sách và đánh dấu đã đọc trong app. |
 | **Đám mây** | **MongoDB** qua API Node (`server/`) — đồng bộ kho & công thức đã lưu. |
 | **Đăng nhập** | **Clerk** (email, OAuth… bật trong Clerk Dashboard; UI từ `clerk_flutter`). |
 | **Cài đặt** | Sáng / tối, Việt / Anh — lưu cục bộ. |
@@ -52,7 +54,7 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 | --- | --- |
 | UI | Flutter · Material 3 · **Provider** (ChangeNotifier) |
 | Backend | **MongoDB** + REST API (`server/`) · **Clerk** JWT |
-| AI | **Groq** `llama-3.3-70b-versatile` → **Gemini** `gemini-2.0-flash` |
+| AI | **Groq** `openai/gpt-oss-120b` (chat), `meta-llama/llama-4-scout-17b-16e-instruct` (recipe) → fallback **Gemini** `gemini-2.0-flash` |
 | Công thức ngoài | TheMealDB, DuckDuckGo |
 | Dịch | Google Translate (unofficial) |
 | Quét mã | **mobile_scanner** (barcode + QR) |
@@ -64,9 +66,9 @@ Song ngữ **Việt – Anh**, giao diện **Material 3**.
 
 | Nhãn sản phẩm | `pubspec` | Android `versionName` · `versionCode` |
 | --- | --- | --- |
-| **b0.4.4** | `1.0.16+17` | `1.0.16` · `17` |
+| **b0.4.11** | `1.0.21+22` | `1.0.21` · `22` |
 
-**b0.3.2:** template Revolvapp Clerk + backlog template — [CHANGELOG](CHANGELOG.md).
+Mốc gần nhất: **b0.4.11** (Hearthie branding, weather banner polish, notification stability) — xem [CHANGELOG](CHANGELOG.md).
 
 Chi tiết từng bản: [**CHANGELOG.md**](CHANGELOG.md).
 
@@ -188,7 +190,7 @@ render.yaml                      # Render Blueprint (tuỳ chọn) — deploy Do
 
 - **Khởi động:** `ClerkAuth` → `AppProvider.init()` (prefs) → sau khi đăng nhập Clerk, `BackendApiService` gọi API với JWT session (HTTP có **timeout** cho cloud/cold start).
 - **Điều hướng:** `IndexedStack` + `NavigationBar` — giữ state từng tab; FAB chỉ tab Kho.
-- **AI:** `AiService` → thử Groq, lỗi thì Gemini.
+- **AI:** Chat dùng `GroqChatService` (`openai/gpt-oss-120b`); gợi ý công thức dùng `AiService` (Groq recipe model → fallback Gemini).
 - **Hiệu năng (b0.1.8):** `MaterialApp` không rebuild khi chỉ đổi dữ liệu kho/công thức; theme dùng instance tĩnh; ảnh TheMealDB decode có giới hạn kích thước cache.
 
 ---

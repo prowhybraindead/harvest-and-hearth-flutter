@@ -27,6 +27,7 @@ app.use(express.json({ limit: '2mb' }));
 
 let db;
 let client;
+const MAX_PLAN_MEAL_BADGES = 12;
 
 async function connectMongo() {
   if (!MONGODB_URI) {
@@ -50,6 +51,28 @@ function savedRecipes() {
 }
 function notifications() {
   return db.collection('notifications');
+}
+
+function normalizeMealNames(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const item of raw) {
+    const s = String(item ?? '').trim();
+    if (!s) continue;
+    const key = s.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+    if (out.length >= MAX_PLAN_MEAL_BADGES) break;
+  }
+  return out;
+}
+
+function normalizePlanSourceLabel(raw, fromShoppingPlan) {
+  const s = String(raw ?? '').trim();
+  if (s) return s;
+  return fromShoppingPlan ? 'Từ shopping plan' : null;
 }
 
 async function clerkAuth(req, res, next) {
@@ -148,6 +171,12 @@ app.get('/api/v1/food-items', clerkAuth, async (req, res) => {
             ? r.expiry_date.toISOString()
             : r.expiry_date,
       warning_days: r.warning_days,
+      from_shopping_plan: Boolean(r.from_shopping_plan),
+      shopping_plan_meal_names: normalizeMealNames(r.shopping_plan_meal_names),
+      plan_source_label: normalizePlanSourceLabel(
+        r.plan_source_label,
+        Boolean(r.from_shopping_plan),
+      ),
     })),
   );
 });
@@ -156,8 +185,10 @@ app.post('/api/v1/food-items', clerkAuth, async (req, res) => {
   const uid = req.userId;
   const rows = Array.isArray(req.body) ? req.body : [req.body];
   const now = new Date();
-  const docs = rows.map((item) => ({
-    id: item.id,
+  const docs = rows.map((item) => {
+    const fromShoppingPlan = Boolean(item.from_shopping_plan);
+    return {
+      id: item.id,
     user_id: uid,
     name: item.name,
     category: item.category,
@@ -167,8 +198,15 @@ app.post('/api/v1/food-items', clerkAuth, async (req, res) => {
     added_date: item.added_date,
     expiry_date: item.expiry_date ?? null,
     warning_days: item.warning_days ?? null,
+    from_shopping_plan: fromShoppingPlan,
+    shopping_plan_meal_names: normalizeMealNames(item.shopping_plan_meal_names),
+    plan_source_label: normalizePlanSourceLabel(
+      item.plan_source_label,
+      fromShoppingPlan,
+    ),
     created_at: now,
-  }));
+    };
+  });
   if (docs.some((d) => !d.id)) {
     return res.status(400).json({ error: 'Each item needs id' });
   }
@@ -193,6 +231,16 @@ app.patch('/api/v1/food-items/:id', clerkAuth, async (req, res) => {
   if ('added_date' in body) set.added_date = body.added_date;
   if ('expiry_date' in body) set.expiry_date = body.expiry_date;
   if ('warning_days' in body) set.warning_days = body.warning_days;
+  if ('from_shopping_plan' in body) set.from_shopping_plan = Boolean(body.from_shopping_plan);
+  if ('shopping_plan_meal_names' in body) {
+    set.shopping_plan_meal_names = normalizeMealNames(body.shopping_plan_meal_names);
+  }
+  if ('plan_source_label' in body) {
+    set.plan_source_label = normalizePlanSourceLabel(
+      body.plan_source_label,
+      'from_shopping_plan' in set ? Boolean(set.from_shopping_plan) : Boolean(r.from_shopping_plan),
+    );
+  }
   await foodItems().updateOne({ id, user_id: uid }, { $set: set });
   res.json({ ok: true });
 });
@@ -254,10 +302,19 @@ app.delete('/api/v1/saved-recipes/:originalId', clerkAuth, async (req, res) => {
 // ── Notifications log ───────────────────────────────────────────────────────
 app.get('/api/v1/notifications', clerkAuth, async (req, res) => {
   const uid = req.userId;
+  const limitRaw = Number(req.query.limit ?? 300);
+  const skipRaw = Number(req.query.skip ?? 0);
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(Math.max(Math.trunc(limitRaw), 1), 1000)
+    : 300;
+  const skip = Number.isFinite(skipRaw)
+    ? Math.max(Math.trunc(skipRaw), 0)
+    : 0;
   const rows = await notifications()
     .find({ userId: uid })
     .sort({ createdAtTs: -1 })
-    .limit(100)
+    .skip(skip)
+    .limit(limit)
     .toArray();
 
   res.json(

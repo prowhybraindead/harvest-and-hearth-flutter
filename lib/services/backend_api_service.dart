@@ -168,6 +168,9 @@ class BackendApiService {
         'added_date': item.addedDate.toIso8601String(),
         'expiry_date': item.expiryDate?.toIso8601String(),
         'warning_days': item.warningDays,
+        'from_shopping_plan': item.fromShoppingPlan,
+        'shopping_plan_meal_names': item.shoppingPlanMealNames,
+        'plan_source_label': item.planSourceLabel,
       };
 
   Future<void> deleteFoodItem(String itemId) async {
@@ -191,6 +194,9 @@ class BackendApiService {
         'added_date': item.addedDate.toIso8601String(),
         'expiry_date': item.expiryDate?.toIso8601String(),
         'warning_days': item.warningDays,
+        'from_shopping_plan': item.fromShoppingPlan,
+        'shopping_plan_meal_names': item.shoppingPlanMealNames,
+        'plan_source_label': item.planSourceLabel,
       }),
     );
     _throwIfBad(r);
@@ -246,9 +252,14 @@ class BackendApiService {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
-  Future<List<Map<String, dynamic>>> getNotificationLogs() async {
+  Future<List<Map<String, dynamic>>> getNotificationLogs({
+    int limit = 300,
+    int skip = 0,
+  }) async {
+    final qLimit = limit.clamp(1, 1000);
+    final qSkip = skip.clamp(0, 50000);
     final r = await _get(
-      _u('/api/v1/notifications'),
+      _u('/api/v1/notifications?limit=$qLimit&skip=$qSkip'),
       headers: await _headers(),
     );
     _throwIfBad(r);

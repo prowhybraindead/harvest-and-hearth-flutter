@@ -1,6 +1,8 @@
 # === TÀI LIỆU NỘI BỘ ===
 AI.md
 RULES.md
+flutter-apk/
+docs/
 
 # === BẢO MẬT - KHÔNG BAO GIỜ COMMIT ===
 .env

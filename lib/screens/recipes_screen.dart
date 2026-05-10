@@ -7,6 +7,7 @@ import '../services/ai_service.dart';
 import '../services/recipe_search_service.dart';
 import '../services/translate_service.dart';
 import '../models/recipe.dart';
+import 'ai_chat_screen.dart';
 import '../widgets/recipe_card.dart';
 
 class RecipesScreen extends StatefulWidget {
@@ -68,27 +69,59 @@ class _RecipesScreenState extends State<RecipesScreen>
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final t = provider.t;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(t('recipes_title'),
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(
-              icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-              text: t('recipes_all'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(62),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: cs.surfaceContainerHighest.withAlpha(92),
+                border: Border.all(color: cs.outlineVariant.withAlpha(95)),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                dividerColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelPadding: EdgeInsets.zero,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: cs.primary.withAlpha(28),
+                  border: Border.all(color: cs.primary.withAlpha(115)),
+                ),
+                tabs: [
+                  SizedBox(
+                    height: 54,
+                    child: Tab(
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      text: t('recipes_all'),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 54,
+                    child: Tab(
+                      icon:
+                          const Icon(Icons.bookmark_outline_rounded, size: 18),
+                      text: t('recipes_saved'),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 54,
+                    child: Tab(
+                      icon: const Icon(Icons.explore_outlined, size: 18),
+                      text: t('explore_title'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Tab(
-              icon: const Icon(Icons.bookmark_outline_rounded, size: 18),
-              text: t('recipes_saved'),
-            ),
-            Tab(
-              icon: const Icon(Icons.explore_outlined, size: 18),
-              text: t('explore_title'),
-            ),
-          ],
+          ),
         ),
       ),
       body: TabBarView(
@@ -133,7 +166,11 @@ class _AllRecipesTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
         Card(
-          color: cs.primaryContainer,
+          color: cs.surfaceContainerHighest.withAlpha(120),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: cs.primary.withAlpha(105), width: 1.2),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -141,15 +178,22 @@ class _AllRecipesTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.auto_awesome_rounded,
-                        color: cs.onPrimaryContainer),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withAlpha(30),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child:
+                          Icon(Icons.auto_awesome_rounded, color: cs.primary),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       t('recipes_ai_chef'),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        color: cs.onPrimaryContainer,
+                        color: cs.onSurface,
                       ),
                     ),
                   ],
@@ -157,15 +201,12 @@ class _AllRecipesTab extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   t('recipes_ai_subtitle'),
-                  style: TextStyle(
-                      color: cs.onPrimaryContainer.withAlpha(179),
-                      fontSize: 13),
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
                 if (errorMsg != null) ...[
                   Text(errorMsg!,
-                      style:
-                          const TextStyle(color: Colors.red, fontSize: 13)),
+                      style: const TextStyle(color: Colors.red, fontSize: 13)),
                   const SizedBox(height: 8),
                 ],
                 SizedBox(
@@ -242,8 +283,7 @@ class _SavedRecipesTab extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.bookmark_outline_rounded,
-                size: 64,
-                color: Theme.of(context).colorScheme.outlineVariant),
+                size: 64, color: Theme.of(context).colorScheme.outlineVariant),
             const SizedBox(height: 16),
             Text(t('recipes_empty_saved'),
                 style: Theme.of(context).textTheme.titleMedium),
@@ -285,11 +325,14 @@ class _ExploreTabState extends State<_ExploreTab>
 
   List<MealSummary> _vietnameseDishes = [];
   List<Recipe> _mealDbResults = [];
+  List<Recipe> _dummyResults = [];
   List<DdgResult> _ddgResults = [];
 
   bool _loadingViet = true;
   bool _searching = false;
   bool _hasSearched = false;
+  bool _filterHighProtein = false;
+  bool _filterLowFat = false;
   String? _loadError;
 
   @override
@@ -309,11 +352,17 @@ class _ExploreTabState extends State<_ExploreTab>
       final dishes = await RecipeSearchService.instance.getVietnameseDishes(
         appLanguage: widget.provider.language,
       );
-      if (mounted) setState(() => _vietnameseDishes = dishes);
+      if (mounted) {
+        setState(() => _vietnameseDishes = dishes);
+      }
     } catch (_) {
-      if (mounted) setState(() => _loadError = widget.provider.t('explore_load_error'));
+      if (mounted) {
+        setState(() => _loadError = widget.provider.t('explore_load_error'));
+      }
     } finally {
-      if (mounted) setState(() => _loadingViet = false);
+      if (mounted) {
+        setState(() => _loadingViet = false);
+      }
     }
   }
 
@@ -324,34 +373,45 @@ class _ExploreTabState extends State<_ExploreTab>
       _searching = true;
       _hasSearched = true;
       _mealDbResults = [];
+      _dummyResults = [];
       _ddgResults = [];
     });
 
     final futures = await Future.wait([
-      RecipeSearchService.instance.searchMealDB(q).catchError((_) => <Recipe>[]),
+      RecipeSearchService.instance
+          .searchMealDB(q)
+          .catchError((_) => <Recipe>[]),
+      RecipeSearchService.instance
+          .searchDummyJson(q)
+          .catchError((_) => <Recipe>[]),
       RecipeSearchService.instance
           .searchDuckDuckGo(q)
           .catchError((_) => <DdgResult>[]),
     ]);
 
     var mealDbResults = futures[0] as List<Recipe>;
+    var dummyResults = futures[1] as List<Recipe>;
     if (widget.provider.language == 'VIE') {
       mealDbResults = await _translateRecipesToVietnamese(mealDbResults);
+      dummyResults = await _translateRecipesToVietnamese(dummyResults);
     }
 
     if (mounted) {
       setState(() {
         _mealDbResults = mealDbResults;
-        _ddgResults = futures[1] as List<DdgResult>;
+        _dummyResults = dummyResults;
+        _ddgResults = futures[2] as List<DdgResult>;
         _searching = false;
       });
     }
   }
 
-  Future<List<Recipe>> _translateRecipesToVietnamese(List<Recipe> recipes) async {
+  Future<List<Recipe>> _translateRecipesToVietnamese(
+      List<Recipe> recipes) async {
     final translated = <Recipe>[];
     for (final r in recipes) {
-      final shouldTranslate = _looksEnglish(r.name) || _looksEnglish(r.description);
+      final shouldTranslate =
+          _looksEnglish(r.name) || _looksEnglish(r.description);
       if (!shouldTranslate) {
         translated.add(r);
         continue;
@@ -375,6 +435,7 @@ class _ExploreTabState extends State<_ExploreTab>
     setState(() {
       _hasSearched = false;
       _mealDbResults = [];
+      _dummyResults = [];
       _ddgResults = [];
     });
   }
@@ -389,19 +450,81 @@ class _ExploreTabState extends State<_ExploreTab>
         // Search bar
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: SearchBar(
-            controller: _searchCtrl,
-            hintText: t('explore_search_hint'),
-            leading: const Icon(Icons.search_rounded),
-            trailing: [
-              if (_searchCtrl.text.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: _clearSearch,
-                ),
+          child: Column(
+            children: [
+              SearchBar(
+                controller: _searchCtrl,
+                hintText: t('explore_search_hint'),
+                leading: const Icon(Icons.search_rounded),
+                trailing: [
+                  if (_searchCtrl.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: _clearSearch,
+                    ),
+                ],
+                onSubmitted: _search,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () {
+                        final prompt = widget.provider.language == 'VIE'
+                            ? 'Nhờ bạn lập kế hoạch thực đơn 1 tuần theo ngân sách tiết kiệm, ưu tiên nguyên liệu dễ mua.'
+                            : 'Please build a 1-week meal plan in budget-saving mode with easy-to-buy ingredients.';
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AiChatScreen(initialPrompt: prompt),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.savings_outlined, size: 18),
+                      label: Text(t('explore_budget_saving')),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () {
+                        final prompt = widget.provider.language == 'VIE'
+                            ? 'Nhờ bạn lập kế hoạch thực đơn 1 tuần theo ngân sách tiêu chuẩn, cân bằng dinh dưỡng.'
+                            : 'Please build a 1-week meal plan in standard budget mode with balanced nutrition.';
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AiChatScreen(initialPrompt: prompt),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.restaurant_menu_rounded, size: 18),
+                      label: Text(t('explore_budget_standard')),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  FilterChip(
+                    selected: _filterHighProtein,
+                    onSelected: (v) => setState(() => _filterHighProtein = v),
+                    label: Text(t('explore_filter_high_protein')),
+                    avatar: const Icon(Icons.fitness_center_rounded, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    selected: _filterLowFat,
+                    onSelected: (v) => setState(() => _filterLowFat = v),
+                    label: Text(t('explore_filter_low_fat')),
+                    avatar: const Icon(Icons.monitor_weight_outlined, size: 16),
+                  ),
+                ],
+              ),
             ],
-            onSubmitted: _search,
-            onChanged: (_) => setState(() {}),
           ),
         ),
 
@@ -462,25 +585,27 @@ class _ExploreTabState extends State<_ExploreTab>
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 12),
-        ..._vietnameseDishes
-            .map((dish) => _MealSummaryCard(
-                  summary: dish,
-                  provider: widget.provider,
-                )),
+        ..._vietnameseDishes.map((dish) => _MealSummaryCard(
+              summary: dish,
+              provider: widget.provider,
+            )),
       ],
     );
   }
 
   Widget _buildSearchResults(String Function(String) t) {
-    final hasResults = _mealDbResults.isNotEmpty || _ddgResults.isNotEmpty;
+    final mealDbFiltered = _applyFitnessFilters(_mealDbResults);
+    final dummyFiltered = _applyFitnessFilters(_dummyResults);
+    final hasResults = mealDbFiltered.isNotEmpty ||
+        dummyFiltered.isNotEmpty ||
+        _ddgResults.isNotEmpty;
     if (!hasResults) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.search_off_rounded,
-                size: 56,
-                color: Theme.of(context).colorScheme.outlineVariant),
+                size: 56, color: Theme.of(context).colorScheme.outlineVariant),
             const SizedBox(height: 12),
             Text(t('explore_empty')),
           ],
@@ -491,14 +616,24 @@ class _ExploreTabState extends State<_ExploreTab>
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       children: [
-        if (_mealDbResults.isNotEmpty) ...[
+        if (mealDbFiltered.isNotEmpty) ...[
           Text(
             t('explore_mealdb_results'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 8),
-          ..._mealDbResults.map(
-              (r) => RecipeCard(recipe: r, provider: widget.provider)),
+          ...mealDbFiltered
+              .map((r) => RecipeCard(recipe: r, provider: widget.provider)),
+          const SizedBox(height: 16),
+        ],
+        if (dummyFiltered.isNotEmpty) ...[
+          Text(
+            t('explore_dummy_results'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          ...dummyFiltered
+              .map((r) => RecipeCard(recipe: r, provider: widget.provider)),
           const SizedBox(height: 16),
         ],
         if (_ddgResults.isNotEmpty) ...[
@@ -507,11 +642,41 @@ class _ExploreTabState extends State<_ExploreTab>
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 8),
-          ..._ddgResults.map(
-              (r) => _DdgResultCard(result: r, provider: widget.provider)),
+          ..._ddgResults
+              .map((r) => _DdgResultCard(result: r, provider: widget.provider)),
         ],
       ],
     );
+  }
+
+  List<Recipe> _applyFitnessFilters(List<Recipe> source) {
+    if (!_filterHighProtein && !_filterLowFat) return source;
+    return source.where((r) {
+      final hay = [
+        r.name.toLowerCase(),
+        r.description.toLowerCase(),
+        ...r.ingredientsNeeded.map((e) => e.toLowerCase()),
+      ].join(' ');
+
+      final highProtein = hay.contains('chicken') ||
+          hay.contains('tuna') ||
+          hay.contains('egg') ||
+          hay.contains('salmon') ||
+          hay.contains('tofu') ||
+          hay.contains('ức gà') ||
+          hay.contains('cá ngừ') ||
+          hay.contains('trứng') ||
+          hay.contains('đậu phụ');
+      final lowFat = !(hay.contains('butter') ||
+          hay.contains('cream') ||
+          hay.contains('mỡ') ||
+          hay.contains('chiên ngập dầu') ||
+          hay.contains('deep fry'));
+
+      if (_filterHighProtein && !_filterLowFat) return highProtein;
+      if (!_filterHighProtein && _filterLowFat) return lowFat;
+      return highProtein && lowFat;
+    }).toList(growable: false);
   }
 }
 
@@ -625,8 +790,8 @@ class _MealSummaryCardState extends State<_MealSummaryCard> {
                     const SizedBox(height: 4),
                     Text(
                       t('explore_tap_for_details'),
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurfaceVariant),
+                      style:
+                          TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -671,36 +836,52 @@ class _MealDetailSheet extends StatefulWidget {
 class _MealDetailSheetState extends State<_MealDetailSheet> {
   String? _translatedName;
   String? _translatedDesc;
+  List<String>? _translatedIngredients;
+  List<String>? _translatedInstructions;
   bool _translating = false;
   bool _showingTranslated = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.provider.language == 'VIE' && _looksEnglishRecipe(widget.recipe)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _translate());
+    if (widget.provider.language == 'VIE' &&
+        _looksEnglishRecipe(widget.recipe)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _translateAll());
     }
   }
 
-  Future<void> _translate() async {
+  Future<void> _translateAll() async {
     if (_translatedName != null) {
       setState(() => _showingTranslated = !_showingTranslated);
       return;
     }
     setState(() => _translating = true);
     final lang = widget.provider.language;
+    final recipe = widget.recipe;
     final results = await Future.wait([
-      TranslateService.instance.translate(widget.recipe.name, lang),
-      TranslateService.instance.translate(widget.recipe.description, lang),
+      TranslateService.instance.translate(recipe.name, lang),
+      TranslateService.instance.translate(recipe.description, lang),
     ]);
+    final ingredients = await _translateList(recipe.ingredientsNeeded, lang);
+    final instructions = await _translateList(recipe.instructions, lang);
     if (mounted) {
       setState(() {
         _translatedName = results[0];
         _translatedDesc = results[1];
+        _translatedIngredients = ingredients;
+        _translatedInstructions = instructions;
         _showingTranslated = true;
         _translating = false;
       });
     }
+  }
+
+  Future<List<String>> _translateList(List<String> values, String lang) async {
+    final out = <String>[];
+    for (final v in values) {
+      out.add(await TranslateService.instance.translate(v, lang));
+    }
+    return out;
   }
 
   bool _looksEnglishRecipe(Recipe recipe) {
@@ -716,10 +897,22 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
     final recipe = widget.recipe;
     final isSaved = widget.provider.isRecipeSaved(recipe.id);
 
-    final displayName =
-        (_showingTranslated && _translatedName != null) ? _translatedName! : recipe.name;
-    final displayDesc =
-        (_showingTranslated && _translatedDesc != null) ? _translatedDesc! : recipe.description;
+    final displayName = (_showingTranslated && _translatedName != null)
+        ? _translatedName!
+        : recipe.name;
+    final displayDesc = (_showingTranslated && _translatedDesc != null)
+        ? _translatedDesc!
+        : recipe.description;
+    final displayIngredients =
+        (_showingTranslated && _translatedIngredients != null)
+            ? _translatedIngredients!
+            : recipe.ingredientsNeeded;
+    final displayInstructions =
+        (_showingTranslated && _translatedInstructions != null)
+            ? _translatedInstructions!
+            : recipe.instructions;
+    final normalizedInstructions =
+        normalizeRecipeInstructions(displayInstructions);
 
     return ListView(
       controller: widget.controller,
@@ -769,7 +962,7 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
             ),
             const SizedBox(width: 8),
             TextButton.icon(
-              onPressed: _translating ? null : _translate,
+              onPressed: _translating ? null : _translateAll,
               icon: _translating
                   ? const SizedBox(
                       width: 16,
@@ -801,8 +994,8 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
           onPressed: () => launchUrl(Uri.parse(recipe.sourceUrl),
               mode: LaunchMode.externalApplication),
           icon: const Icon(Icons.open_in_new_rounded, size: 16),
-          label: Text(t('explore_open_web'),
-              style: const TextStyle(fontSize: 13)),
+          label:
+              Text(t('explore_open_web'), style: const TextStyle(fontSize: 13)),
         ),
         const Divider(height: 24),
 
@@ -813,7 +1006,7 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
                 .titleMedium
                 ?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...recipe.ingredientsNeeded.map((ing) => Padding(
+        ...displayIngredients.map((ing) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -834,7 +1027,10 @@ class _MealDetailSheetState extends State<_MealDetailSheet> {
                 .titleMedium
                 ?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...recipe.instructions.asMap().entries.map((e) => Padding(
+        ...normalizedInstructions
+            .asMap()
+            .entries
+            .map((e) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -927,10 +1123,12 @@ class _DdgResultCardState extends State<_DdgResultCard> {
     final t = widget.provider.t;
     final r = widget.result;
 
-    final displayTitle =
-        (_showingTranslated && _translatedTitle != null) ? _translatedTitle! : r.title;
-    final displaySnippet =
-        (_showingTranslated && _translatedSnippet != null) ? _translatedSnippet! : r.snippet;
+    final displayTitle = (_showingTranslated && _translatedTitle != null)
+        ? _translatedTitle!
+        : r.title;
+    final displaySnippet = (_showingTranslated && _translatedSnippet != null)
+        ? _translatedSnippet!
+        : r.snippet;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -941,8 +1139,7 @@ class _DdgResultCardState extends State<_DdgResultCard> {
           children: [
             // Source badge
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: cs.secondaryContainer,
                 borderRadius: BorderRadius.circular(6),
@@ -957,8 +1154,8 @@ class _DdgResultCardState extends State<_DdgResultCard> {
             ),
             const SizedBox(height: 8),
             Text(displayTitle,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 14)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 4),
             Text(
               displaySnippet,

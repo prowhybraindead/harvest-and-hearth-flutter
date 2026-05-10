@@ -6,12 +6,33 @@ import '../models/food_item.dart';
 import '../screens/ai_chat_screen.dart';
 import '../screens/barcode_scanner_screen.dart';
 import '../screens/recipes_screen.dart';
+import '../screens/shopping_planner_screen.dart';
 import '../widgets/add_food_modal.dart';
 import '../constants/categories.dart';
+import '../theme/app_theme.dart';
 import '../utils/date_helper.dart';
+import '../services/weather_service.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  late Future<WeatherSnapshot> _weatherFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _weatherFuture = _loadWeather();
+  }
+
+  Future<WeatherSnapshot> _loadWeather() {
+    final isVn = context.read<AppProvider>().language == 'VIE';
+    return WeatherService.fetchCurrentWeather(isVietnamese: isVn);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +75,15 @@ class DashboardScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
         children: [
-          _WelcomeBanner(provider: provider),
+          _WelcomeBanner(
+            provider: provider,
+            weatherFuture: _weatherFuture,
+            onRefreshWeather: () {
+              setState(() {
+                _weatherFuture = _loadWeather();
+              });
+            },
+          ),
           const SizedBox(height: 20),
           _StatsRow(
             total: provider.inventory.length,
@@ -66,7 +95,7 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: 20),
           _SectionHeader(title: t('dashboard_quick_actions')),
           const SizedBox(height: 10),
-          _QuickActionGrid(provider: provider),
+          _QuickActionGrid(provider: provider, isDemoMode: provider.isDemoMode),
           const SizedBox(height: 20),
           _AiChatPreviewCard(provider: provider),
           const SizedBox(height: 20),
@@ -84,19 +113,21 @@ class DashboardScreen extends StatelessWidget {
           _SectionHeader(title: t('dashboard_realtime_recipes')),
           const SizedBox(height: 10),
           _RealtimeRecipeSuggestionsCard(provider: provider),
-          const SizedBox(height: 20),
-          _SectionHeader(title: t('dashboard_recent')),
-          const SizedBox(height: 10),
-          if (recent.isEmpty)
-            _EmptyCard(message: t('dashboard_no_items'))
-          else
-            _RecentItemsList(
-              items: recent,
-              t: t,
-              language: provider.language,
-            ),
-          const SizedBox(height: 20),
-          _TipCard(t: t),
+          if (!provider.isDemoMode) ...[
+            const SizedBox(height: 20),
+            _SectionHeader(title: t('dashboard_recent')),
+            const SizedBox(height: 10),
+            if (recent.isEmpty)
+              _EmptyCard(message: t('dashboard_no_items'))
+            else
+              _RecentItemsList(
+                items: recent,
+                t: t,
+                language: provider.language,
+              ),
+            const SizedBox(height: 20),
+            _TipCard(t: t),
+          ],
         ],
       ),
     );
@@ -105,85 +136,278 @@ class DashboardScreen extends StatelessWidget {
 
 // ── Welcome Banner ──────────────────────────────────────────────────────────
 
-class _WelcomeBanner extends StatelessWidget {
+class _WelcomeBanner extends StatefulWidget {
   final AppProvider provider;
-  const _WelcomeBanner({required this.provider});
+  final Future<WeatherSnapshot> weatherFuture;
+  final VoidCallback onRefreshWeather;
+  const _WelcomeBanner({
+    required this.provider,
+    required this.weatherFuture,
+    required this.onRefreshWeather,
+  });
 
   @override
+  State<_WelcomeBanner> createState() => _WelcomeBannerState();
+}
+
+class _WelcomeBannerState extends State<_WelcomeBanner> {
+  @override
   Widget build(BuildContext context) {
+    final provider = widget.provider;
     final t = provider.t;
-    final cs = Theme.of(context).colorScheme;
     final name = provider.user?.name ?? '';
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? (provider.language == 'VIE' ? 'Chào buổi sáng' : 'Good morning')
         : hour < 17
             ? (provider.language == 'VIE'
-                ? 'Chào buổi chiều'
+                ? 'Chào buổi trưa'
                 : 'Good afternoon')
             : (provider.language == 'VIE' ? 'Chào buổi tối' : 'Good evening');
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [cs.primary, cs.primary.withAlpha(204), cs.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          stops: const [0.0, 0.6, 1.0],
+    return FutureBuilder<WeatherSnapshot>(
+      future: widget.weatherFuture,
+      builder: (context, snapshot) {
+        final weather = snapshot.data;
+        final scene = _resolveSkyScene(hour, weather?.weatherCode);
+        final gradient = _gradientForScene(scene);
+        final symbol = _symbolForScene(scene, hour);
+
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: const [0.0, 0.65, 1.0],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.first.withAlpha(70),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(38),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.waving_hand_rounded,
+                  color: Colors.amberAccent,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$greeting, $name',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      t('dashboard_subtitle'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _WeatherMiniInfo(
+                provider: provider,
+                weather: weather,
+                symbol: symbol,
+                onRefresh: widget.onRefreshWeather,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Color> _gradientForScene(_SkyScene scene) {
+    switch (scene) {
+      case _SkyScene.daySunny:
+        return const [Color(0xFF2F80ED), Color(0xFF56CCF2), Color(0xFFFFD166)];
+      case _SkyScene.dayRainy:
+        return const [Color(0xFF314755), Color(0xFF4B6B7C), Color(0xFF1F2F3A)];
+      case _SkyScene.noon:
+        return const [Color(0xFF1890FF), Color(0xFF6AD0FF), Color(0xFFFFA940)];
+      case _SkyScene.nightClear:
+        return const [Color(0xFF0B1D3A), Color(0xFF152A52), Color(0xFF050A17)];
+    }
+  }
+
+  _SkyScene _resolveSkyScene(int hour, int? weatherCode) {
+    final rainyCodes = <int>{
+      51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99
+    };
+    if (hour >= 19 || hour < 5) return _SkyScene.nightClear;
+    if (hour >= 11 && hour < 14) return _SkyScene.noon;
+    if (weatherCode != null && rainyCodes.contains(weatherCode)) {
+      return _SkyScene.dayRainy;
+    }
+    return _SkyScene.daySunny;
+  }
+
+  _WeatherSymbol _symbolForScene(_SkyScene scene, int hour) {
+    switch (scene) {
+      case _SkyScene.daySunny:
+        return hour >= 15 ? _WeatherSymbol.evening : _WeatherSymbol.morning;
+      case _SkyScene.noon:
+        return _WeatherSymbol.noon;
+      case _SkyScene.nightClear:
+        return _WeatherSymbol.night;
+      case _SkyScene.dayRainy:
+        return _WeatherSymbol.rain;
+    }
+  }
+}
+
+class _WeatherMiniInfo extends StatelessWidget {
+  const _WeatherMiniInfo({
+    required this.provider,
+    required this.weather,
+    required this.symbol,
+    required this.onRefresh,
+  });
+
+  final AppProvider provider;
+  final WeatherSnapshot? weather;
+  final _WeatherSymbol symbol;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    if (weather == null) {
+      return InkWell(
+        onTap: onRefresh,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(28),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withAlpha(42)),
+          ),
+          child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: cs.primary.withAlpha(51),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(38),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.waving_hand_rounded,
-              color: Colors.amberAccent,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      );
+    }
+    return InkWell(
+      onTap: onRefresh,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 134),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(26),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withAlpha(42)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
                 Text(
-                  '$greeting, $name',
+                  '${weather!.temperatureC.toStringAsFixed(0)}°C',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 13,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  t('dashboard_subtitle'),
-                  style: const TextStyle(
-                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
                     fontSize: 17,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(width: 8),
+                _WeatherSymbolIcon(symbol: symbol),
               ],
             ),
-          ),
-        ],
+            Text(
+              weather!.city,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+class _WeatherSymbolIcon extends StatelessWidget {
+  const _WeatherSymbolIcon({required this.symbol});
+
+  final _WeatherSymbol symbol;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (symbol) {
+      case _WeatherSymbol.morning:
+        return const Icon(Icons.wb_sunny_rounded, color: Color(0xFFFFD54F), size: 20);
+      case _WeatherSymbol.noon:
+        return const Icon(Icons.sunny, color: Color(0xFFFFD54F), size: 20);
+      case _WeatherSymbol.evening:
+        return const Icon(Icons.wb_twilight_rounded, color: Color(0xFFFFD54F), size: 20);
+      case _WeatherSymbol.night:
+        return const Icon(Icons.nights_stay_rounded, color: Color(0xFFFFF3B0), size: 20);
+      case _WeatherSymbol.rain:
+        return const Icon(Icons.thunderstorm_rounded, color: Color(0xFFE3F2FD), size: 20);
+    }
+  }
+}
+
+class _HearthieLogo extends StatelessWidget {
+  const _HearthieLogo({
+    required this.size,
+    required this.tint,
+  });
+
+  final double size;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColorFiltered(
+      colorFilter: ColorFilter.mode(
+        tint.withAlpha(235),
+        BlendMode.srcATop,
+      ),
+      child: Image.asset(
+        'public/hearthie/hearthie.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+      ),
+    );
+  }
+}
+
+enum _SkyScene { daySunny, dayRainy, noon, nightClear }
+
+enum _WeatherSymbol { morning, noon, evening, night, rain }
 
 // ── Stats Row ───────────────────────────────────────────────────────────────
 
@@ -288,83 +512,104 @@ class _StatCard extends StatelessWidget {
 
 class _QuickActionGrid extends StatelessWidget {
   final AppProvider provider;
-  const _QuickActionGrid({required this.provider});
+  final bool isDemoMode;
+  const _QuickActionGrid({required this.provider, required this.isDemoMode});
 
   @override
   Widget build(BuildContext context) {
     final t = provider.t;
     final cs = Theme.of(context).colorScheme;
 
-    return Row(
-      children: [
-        _QuickActionButton(
-          icon: Icons.add_circle_outline_rounded,
-          label: t('dashboard_quick_add'),
-          color: cs.primary,
-          onTap: () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              useSafeArea: true,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = (constraints.maxWidth - 10) / 2;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            SizedBox(
+              width: itemWidth,
+              child: _QuickActionButton(
+                icon: Icons.add_circle_outline_rounded,
+                label: t('dashboard_quick_add'),
+                color: cs.primary,
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    builder: (_) => const AddFoodModal(),
+                  );
+                },
               ),
-              builder: (_) => const AddFoodModal(),
-            );
-          },
-        ),
-        const SizedBox(width: 10),
-        _QuickActionButton(
-          icon: Icons.qr_code_scanner_rounded,
-          label: t('food_barcode'),
-          color: Colors.teal,
-          onTap: () async {
-            final scanned = await Navigator.of(context, rootNavigator: true)
-                .push<String>(
-              MaterialPageRoute(
-                fullscreenDialog: true,
-                builder: (_) => BarcodeScannerScreen(t: t),
+            ),
+            SizedBox(
+              width: itemWidth,
+              child: _QuickActionButton(
+                icon: Icons.qr_code_scanner_rounded,
+                label: t('food_barcode'),
+                color: cs.secondary,
+                onTap: () async {
+                  final scanned =
+                      await Navigator.of(context, rootNavigator: true)
+                          .push<String>(
+                    MaterialPageRoute(
+                      fullscreenDialog: true,
+                      builder: (_) => BarcodeScannerScreen(t: t),
+                    ),
+                  );
+                  if (!context.mounted) return;
+                  if (scanned == null || scanned.isEmpty) return;
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    builder: (_) => AddFoodModal(initialScannedName: scanned),
+                  );
+                },
               ),
-            );
-            if (!context.mounted) return;
-            if (scanned == null || scanned.isEmpty) return;
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              useSafeArea: true,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            SizedBox(
+              width: itemWidth,
+              child: _QuickActionButton(
+                icon: Icons.shopping_bag_outlined,
+                label: t('dashboard_quick_planning'),
+                color: cs.primary,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ShoppingPlannerScreen(),
+                    ),
+                  );
+                },
               ),
-              builder: (_) => AddFoodModal(initialScannedName: scanned),
-            );
-          },
-        ),
-        const SizedBox(width: 10),
-        _QuickActionButton(
-          icon: Icons.smart_toy_rounded,
-          label: t('dashboard_chat_hint'),
-          color: cs.secondary,
-          isHighlight: true,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AiChatScreen()),
-            );
-          },
-        ),
-        const SizedBox(width: 10),
-        _QuickActionButton(
-          icon: Icons.restaurant_menu_rounded,
-          label: t('dashboard_ai_suggestion'),
-          color: Colors.deepPurple,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RecipesScreen()),
-            );
-          },
-        ),
-      ],
+            ),
+            SizedBox(
+              width: itemWidth,
+              child: _QuickActionButton(
+                icon: Icons.restaurant_menu_rounded,
+                label: t('dashboard_ai_suggestion'),
+                color: cs.primary,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RecipesScreen()),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -374,57 +619,54 @@ class _QuickActionButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  final bool isHighlight;
 
   const _QuickActionButton({
     required this.icon,
     required this.label,
     required this.color,
     required this.onTap,
-    this.isHighlight = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-            decoration: BoxDecoration(
-              color: isHighlight ? color.withAlpha(26) : color.withAlpha(12),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isHighlight ? color.withAlpha(77) : color.withAlpha(26),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+          decoration: BoxDecoration(
+            color: color.withAlpha(10),
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(
+              color: color.withAlpha(64),
+              width: 1.2,
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: color.withAlpha(30),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 20),
               ),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(26),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),
@@ -464,14 +706,13 @@ class _AiChatPreviewCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [cs.secondary, cs.secondary.withAlpha(153)],
+                    colors: [AppColors.hearthieSky, AppColors.hearthieGold],
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.chat_bubble_rounded,
-                  color: Colors.white,
+                child: _HearthieLogo(
                   size: 24,
+                  tint: Colors.white,
                 ),
               ),
               const SizedBox(width: 14),
@@ -664,7 +905,8 @@ class _RealtimeRecipeSuggestionsCard extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const RecipesScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const RecipesScreen()),
                       );
                     },
                     icon: const Icon(Icons.restaurant_menu_rounded, size: 18),
@@ -680,7 +922,10 @@ class _RealtimeRecipeSuggestionsCard extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const AiChatScreen()),
                       );
                     },
-                    icon: const Icon(Icons.smart_toy_rounded, size: 18),
+                    icon: _HearthieLogo(
+                      size: 18,
+                      tint: cs.onSecondaryContainer,
+                    ),
                     label: Text(provider.t('dashboard_recipe_open_ai')),
                   ),
                 ),
@@ -706,7 +951,9 @@ class _RealtimeRecipeSuggestionsCard extends StatelessWidget {
       list.add(
         _RecipeSuggestion(
           icon: Icons.schedule_rounded,
-          title: isVn ? 'Ưu tiên hôm nay: ${item.name}' : 'Priority today: ${item.name}',
+          title: isVn
+              ? 'Ưu tiên hôm nay: ${item.name}'
+              : 'Priority today: ${item.name}',
           subtitle: isVn
               ? 'Nên ưu tiên ${item.name} trước để hạn chế lãng phí thực phẩm.'
               : 'Cook with ${item.name} first to reduce waste.',
@@ -734,7 +981,9 @@ class _RealtimeRecipeSuggestionsCard extends StatelessWidget {
       list.add(
         _RecipeSuggestion(
           icon: Icons.lunch_dining_outlined,
-          title: isVn ? 'Gợi ý bữa trưa cân bằng dinh dưỡng' : 'Balanced lunch idea',
+          title: isVn
+              ? 'Gợi ý bữa trưa cân bằng dinh dưỡng'
+              : 'Balanced lunch idea',
           subtitle: isVn
               ? 'Kết hợp đạm và rau để đủ năng lượng cho cả buổi chiều.'
               : 'Combine protein + vegetables for steady afternoon energy.',
@@ -747,7 +996,9 @@ class _RealtimeRecipeSuggestionsCard extends StatelessWidget {
       list.add(
         _RecipeSuggestion(
           icon: Icons.dinner_dining_outlined,
-          title: isVn ? 'Gợi ý bữa tối gọn nhẹ sau giờ làm' : 'Time-saving dinner idea',
+          title: isVn
+              ? 'Gợi ý bữa tối gọn nhẹ sau giờ làm'
+              : 'Time-saving dinner idea',
           subtitle: isVn
               ? 'Ưu tiên món một chảo hoặc một nồi để nấu và dọn nhanh.'
               : 'Try one-pan or one-pot dishes for faster cleanup.',
@@ -762,7 +1013,9 @@ class _RealtimeRecipeSuggestionsCard extends StatelessWidget {
       list.add(
         _RecipeSuggestion(
           icon: Icons.auto_awesome_rounded,
-          title: isVn ? 'Menu tức thì từ kho hiện tại' : 'Instant menu from current inventory',
+          title: isVn
+              ? 'Menu tức thì từ kho hiện tại'
+              : 'Instant menu from current inventory',
           subtitle: isVn
               ? 'AI có thể dựng thực đơn theo đúng nguyên liệu bạn đang có ngay lúc này.'
               : 'AI can build a menu directly from what you have now.',
@@ -873,19 +1126,19 @@ class _ExpiryBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = isExpired
-      ? cs.error
-      : (isExpiringSoon
-        ? (cs.brightness == Brightness.dark
-          ? const Color(0xFFFFC46B)
-          : const Color(0xFFB76A00))
-        : const Color(0xFF2E7D32));
+        ? cs.error
+        : (isExpiringSoon
+            ? (cs.brightness == Brightness.dark
+                ? const Color(0xFFFFC46B)
+                : const Color(0xFFB76A00))
+            : const Color(0xFF2E7D32));
     final bg = isExpired
-      ? cs.errorContainer.withAlpha(120)
-      : (isExpiringSoon
-        ? (cs.brightness == Brightness.dark
-          ? const Color(0xFF4A3200).withAlpha(110)
-          : const Color(0xFFFFF1D8))
-        : const Color(0xFFE6F4EA));
+        ? cs.errorContainer.withAlpha(120)
+        : (isExpiringSoon
+            ? (cs.brightness == Brightness.dark
+                ? const Color(0xFF4A3200).withAlpha(110)
+                : const Color(0xFFFFF1D8))
+            : const Color(0xFFE6F4EA));
     final icon = isExpired
         ? Icons.dangerous_rounded
         : (isExpiringSoon

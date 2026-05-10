@@ -35,10 +35,15 @@ class FoodItemCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: cs.outlineVariant.withAlpha(95)),
+      ),
       child: InkWell(
         onTap: onEdit,
+        borderRadius: BorderRadius.circular(18),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -70,9 +75,13 @@ class FoodItemCard extends StatelessWidget {
                           ),
                         ),
                         if (isExpired)
-                          _Badge(label: language == 'VIE' ? 'Hết hạn' : 'Expired', color: Colors.red)
+                          _Badge(
+                              label: language == 'VIE' ? 'Hết hạn' : 'Expired',
+                              color: Colors.red)
                         else if (isSoon)
-                          _Badge(label: language == 'VIE' ? 'Sắp hết' : 'Expiring', color: Colors.orange),
+                          _Badge(
+                              label: language == 'VIE' ? 'Sắp hết' : 'Expiring',
+                              color: Colors.orange),
                       ],
                     ),
                     const SizedBox(height: 3),
@@ -99,11 +108,59 @@ class FoodItemCard extends StatelessWidget {
                         Text(
                           '${_formatQty(item.quantity)} ${item.unit}',
                           style: TextStyle(
-                              fontSize: 12,
-                              color: cs.onSurfaceVariant),
+                              fontSize: 12, color: cs.onSurfaceVariant),
                         ),
                       ],
                     ),
+                    if (item.fromShoppingPlan ||
+                        item.shoppingPlanMealNames.isNotEmpty ||
+                        (item.planSourceLabel ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (item.fromShoppingPlan ||
+                              (item.planSourceLabel ?? '').trim().isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: cs.tertiaryContainer.withAlpha(170),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                language == 'VIE'
+                                    ? 'Kế hoạch mua sắm'
+                                    : 'Shopping plan',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: cs.onTertiaryContainer,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ...item.shoppingPlanMealNames.map(
+                            (meal) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: cs.primaryContainer.withAlpha(175),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                meal,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: cs.onPrimaryContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
 
                     // Expiry info
                     if (item.expiryDate != null) ...[
@@ -115,8 +172,7 @@ class FoodItemCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             DateHelper.format(item.expiryDate!),
-                            style: TextStyle(
-                                fontSize: 11, color: statusColor),
+                            style: TextStyle(fontSize: 11, color: statusColor),
                           ),
                           const SizedBox(width: 6),
                           if (days != null)
@@ -138,20 +194,28 @@ class FoodItemCard extends StatelessWidget {
               ),
 
               // Actions
-              Column(
-                mainAxisSize: MainAxisSize.min,
+              Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     color: cs.primary.withAlpha(179),
                     onPressed: onEdit,
                     visualDensity: VisualDensity.compact,
+                    style: IconButton.styleFrom(
+                      backgroundColor: cs.primary.withAlpha(18),
+                      side: BorderSide(color: cs.primary.withAlpha(80)),
+                    ),
                   ),
+                  const SizedBox(width: 6),
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
                     color: Colors.red.withAlpha(179),
                     onPressed: onDelete,
                     visualDensity: VisualDensity.compact,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.red.withAlpha(18),
+                      side: BorderSide(color: Colors.red.withAlpha(80)),
+                    ),
                   ),
                 ],
               ),

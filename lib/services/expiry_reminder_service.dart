@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,8 @@ import '../constants/translations.dart';
 import '../models/food_item.dart';
 import 'backend_api_service.dart';
 
+enum TestNotificationStatus { sent, permissionDenied, failed }
+
 /// Daily summary at 09:00 local time when there are expired / expiring-soon items.
 class ExpiryReminderService {
   ExpiryReminderService._();
@@ -20,6 +23,7 @@ class ExpiryReminderService {
   static const prefsKeyEnabled = 'expiry_reminders_enabled';
   static const _channelId = 'harvest_expiry';
   static const _channelIdUrgent = 'harvest_expiry_urgent';
+
   /// High-importance channel for immediate / heads-up notifications (Android 8+).
   static const _channelIdImmediate = 'harvest_expiry_immediate';
   static const _notificationIdSummary = 10001;
@@ -32,7 +36,8 @@ class ExpiryReminderService {
   static const payloadUrgent = 'expiry:urgent';
   static const payloadSimulator = 'expiry:simulator';
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   final StreamController<String> _tapPayloadController =
       StreamController<String>.broadcast();
 
@@ -134,10 +139,12 @@ class ExpiryReminderService {
       return;
     }
 
-    final expiring = items.where((e) => e.isExpiringSoon && !e.isExpired).length;
+    final expiring =
+        items.where((e) => e.isExpiringSoon && !e.isExpired).length;
     final expiredItems = items.where((e) => e.isExpired).toList();
     final expired = expiredItems.length;
-    final expiringItems = items.where((e) => e.isExpiringSoon && !e.isExpired).toList();
+    final expiringItems =
+        items.where((e) => e.isExpiringSoon && !e.isExpired).toList();
     if (expiring == 0 && expired == 0) {
       await _plugin.cancel(_notificationIdSummary);
       await _plugin.cancel(_notificationIdUrgent);
@@ -194,6 +201,8 @@ class ExpiryReminderService {
       userId: userId,
       title: title,
       message: body,
+      expiredItems: expiredItems,
+      expiringItems: expiringItems,
     );
 
     await _maybeShowUrgentExpired(
@@ -255,11 +264,15 @@ class ExpiryReminderService {
     );
     await prefs.setString(_prefsUrgentLastDate, todayKey);
 
+    final topExpired = expiredItems.map((e) => e.name).take(5).join(', ');
+    final enrichedBody =
+        topExpired.isEmpty ? body : '$body | ${language == 'ENG' ? 'Items' : 'Món'}: $topExpired';
+
     await _logNotificationToBackend(
       userId: userId,
       title: title,
-      message: body,
-      type: 'expiry',
+      message: enrichedBody,
+      type: 'expiry_urgent',
     );
   }
 
@@ -267,17 +280,27 @@ class ExpiryReminderService {
     required String? userId,
     required String title,
     required String message,
+    required List<FoodItem> expiredItems,
+    required List<FoodItem> expiringItems,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final key = '${_todayKey()}|${userId ?? ''}|$message';
     final last = prefs.getString(_prefsSummaryLogLast);
     if (last == key) return;
 
+    final names = {
+      ...expiredItems.map((e) => e.name),
+      ...expiringItems.map((e) => e.name),
+    }.take(5).join(', ');
+    final enrichedMessage = names.isEmpty
+        ? message
+        : '$message | ${expiredItems.isNotEmpty ? 'Expired' : 'Expiring'}: $names';
+
     await _logNotificationToBackend(
       userId: userId,
       title: title,
-      message: message,
-      type: 'expiry',
+      message: enrichedMessage,
+      type: 'expiry_summary',
     );
     await prefs.setString(_prefsSummaryLogLast, key);
   }
@@ -355,8 +378,7 @@ class ExpiryReminderService {
   }
 
   /// Immediate notification with the same copy as the daily summary (QA / time simulator).
-  /// Returns `false` if the user denied notification permission (Android 13+ / iOS).
-  Future<bool> showImmediateTestSummary({
+  Future<TestNotificationStatus> showImmediateTestSummary({
     required int expiring,
     required int expired,
     required String language,
@@ -367,10 +389,11 @@ class ExpiryReminderService {
     if (Platform.isAndroid) {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
-      final granted = await android?.requestNotificationsPermission();
-      if (granted == false) {
-        debugPrint('ExpiryReminderService: POST_NOTIFICATIONS denied');
-        return false;
+      final enabledBefore = await android?.areNotificationsEnabled();
+      if (enabledBefore == false) {
+        // Request permission, but do not treat this probe as authoritative.
+        // Some OEMs may report transient false values despite user-granted permission.
+        await android?.requestNotificationsPermission();
       }
     } else if (Platform.isIOS) {
       final ios = _plugin.resolvePlatformSpecificImplementation<
@@ -382,7 +405,7 @@ class ExpiryReminderService {
       );
       if (ok == false) {
         debugPrint('ExpiryReminderService: iOS notification permission denied');
-        return false;
+        return TestNotificationStatus.permissionDenied;
       }
     }
 
@@ -413,12 +436,10 @@ class ExpiryReminderService {
     final details = NotificationDetails(android: android, iOS: ios);
 
     try {
-      await _plugin.show(
-        _notificationIdSimulatorTest,
-        title,
-        body,
-        details,
-        payload: payloadSimulator,
+      await _showImmediate(
+        title: title,
+        body: body,
+        details: details,
       );
 
       await _logNotificationToBackend(
@@ -428,10 +449,77 @@ class ExpiryReminderService {
         type: 'expiry_test',
       );
 
-      return true;
+      return TestNotificationStatus.sent;
     } catch (e, st) {
       debugPrint('ExpiryReminderService showImmediateTestSummary: $e\n$st');
+      // Retry once with minimal Android options in case OEM launcher/icon style
+      // rejects richer notification payloads.
+      if (Platform.isAndroid) {
+        try {
+          final fallbackAndroid = AndroidNotificationDetails(
+            _channelIdImmediate,
+            'Harvest & Hearth — Thông báo ngay',
+            channelDescription: 'Thông báo thử và cảnh báo hiển thị ngay',
+            importance: Importance.high,
+            priority: Priority.high,
+          );
+          const fallbackIos = DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          );
+          await _showImmediate(
+            title: title,
+            body: body,
+            details: NotificationDetails(
+              android: fallbackAndroid,
+              iOS: fallbackIos,
+            ),
+          );
+          return TestNotificationStatus.sent;
+        } catch (retryError, retrySt) {
+          debugPrint(
+              'ExpiryReminderService showImmediateTestSummary fallback: $retryError\n$retrySt');
+        }
+      }
+      final message = e.toString().toLowerCase();
+      if (_isPermissionError(e, message)) {
+        return TestNotificationStatus.permissionDenied;
+      }
+      return TestNotificationStatus.failed;
+    }
+  }
+
+  Future<void> _showImmediate({
+    required String title,
+    required String body,
+    required NotificationDetails details,
+  }) {
+    return _plugin.show(
+      _notificationIdSimulatorTest,
+      title,
+      body,
+      details,
+      payload: payloadSimulator,
+    );
+  }
+
+  bool _isPermissionError(Object error, String message) {
+    if (error is PlatformException) {
+      final code = error.code.toLowerCase();
+      if (code.contains('permission') || code.contains('denied')) {
+        return true;
+      }
+    }
+
+    if (error is MissingPluginException) {
       return false;
     }
+
+    // Avoid broad "notifications" matching to prevent false negatives.
+    return message.contains('permission denied') ||
+        message.contains('not allowed') ||
+        message.contains('securityexception') ||
+        message.contains('post_notifications');
   }
 }

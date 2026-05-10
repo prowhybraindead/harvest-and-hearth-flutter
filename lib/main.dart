@@ -14,55 +14,13 @@ import 'screens/recipes_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/backend_api_service.dart';
 import 'services/expiry_reminder_service.dart';
+import 'theme/app_theme.dart';
 import 'widgets/add_food_modal.dart';
 import 'widgets/time_simulator_console.dart';
 
 /// Built once — avoids rebuilding [ColorScheme] / [ThemeData] on every [AppProvider] tick.
-final ThemeData kAppLightTheme = ThemeData(
-  useMaterial3: true,
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: const Color(0xFF2E7D32),
-    brightness: Brightness.light,
-    secondary: const Color(0xFFFF9800),
-  ),
-  scaffoldBackgroundColor: const Color(0xFFF8FAF9),
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFFF8FAF9),
-    surfaceTintColor: Colors.transparent,
-    elevation: 0,
-  ),
-  cardTheme: CardThemeData(
-    elevation: 0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: const BorderSide(color: Color(0xFFE0E7E2)),
-    ),
-    color: Colors.white,
-  ),
-);
-
-final ThemeData kAppDarkTheme = ThemeData(
-  useMaterial3: true,
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: const Color(0xFF176A21),
-    brightness: Brightness.dark,
-    secondary: const Color(0xFFFFB74D),
-  ),
-  scaffoldBackgroundColor: const Color(0xFF050C07),
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFF050C07),
-    surfaceTintColor: Colors.transparent,
-    elevation: 0,
-  ),
-  cardTheme: CardThemeData(
-    elevation: 0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: const BorderSide(color: Color(0xFF1A3320)),
-    ),
-    color: const Color(0xFF0D1F11),
-  ),
-);
+final ThemeData kAppLightTheme = buildAppTheme(isDark: false);
+final ThemeData kAppDarkTheme = buildAppTheme(isDark: true);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -217,8 +175,7 @@ class _ClerkBootstrapState extends State<_ClerkBootstrap> {
   @override
   Widget build(BuildContext context) {
     return Selector<AppProvider, ({bool loading, bool hasUser})>(
-      selector: (_, p) =>
-          (loading: p.isLoadingUser, hasUser: p.user != null),
+      selector: (_, p) => (loading: p.isLoadingUser, hasUser: p.user != null),
       builder: (context, s, _) {
         if (!_started || s.loading || !s.hasUser) {
           return const _SplashScreen();
@@ -294,7 +251,8 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
-    _notificationTapSub = ExpiryReminderService.instance.tapPayloadStream.listen(
+    _notificationTapSub =
+        ExpiryReminderService.instance.tapPayloadStream.listen(
       (payload) {
         if (!mounted) return;
         if (payload.startsWith('expiry:')) {
@@ -312,7 +270,6 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final lang = context.select<AppProvider, String>((p) => p.language);
     final t = context.read<AppProvider>().t;
     final showTimeSim = isTimeSimulatorFabVisible();
 
@@ -322,47 +279,106 @@ class _MainShellState extends State<MainShell> {
         children: [
           IndexedStack(index: _currentIndex, children: _screens),
           if (showTimeSim)
-            const Positioned(
+            Positioned(
               left: 16,
-              bottom: 16,
-              child: TimeSimulatorFab(),
+              bottom: MediaQuery.of(context).padding.bottom + 92,
+              child: const TimeSimulatorFab(),
             ),
         ],
       ),
-      floatingActionButton: _currentIndex == 1
-          ? FloatingActionButton(
-              heroTag: 'add_food_fab',
-              onPressed: _showAddFoodModal,
-              tooltip: t('add_food'),
-              child: const Icon(Icons.add_rounded),
-            )
-          : null,
-      bottomNavigationBar: NavigationBar(
-        key: ValueKey<String>(lang),
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.dashboard_outlined),
-            selectedIcon: const Icon(Icons.dashboard),
-            label: t('nav_home'),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'add_food_fab_global',
+        onPressed: _showAddFoodModal,
+        tooltip: t('add_food'),
+        elevation: 10,
+        child: const Icon(Icons.add_rounded, size: 30),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        height: 72,
+        child: Row(
+          children: [
+            _BottomNavItem(
+              icon: Icons.dashboard_outlined,
+              selectedIcon: Icons.dashboard,
+              label: t('nav_home'),
+              selected: _currentIndex == 0,
+              onTap: () => setState(() => _currentIndex = 0),
+            ),
+            _BottomNavItem(
+              icon: Icons.kitchen_outlined,
+              selectedIcon: Icons.kitchen,
+              label: t('nav_inventory'),
+              selected: _currentIndex == 1,
+              onTap: () => setState(() => _currentIndex = 1),
+            ),
+            const SizedBox(width: 56),
+            _BottomNavItem(
+              icon: Icons.restaurant_menu_outlined,
+              selectedIcon: Icons.restaurant_menu,
+              label: t('nav_recipes'),
+              selected: _currentIndex == 2,
+              onTap: () => setState(() => _currentIndex = 2),
+            ),
+            _BottomNavItem(
+              icon: Icons.person_outline,
+              selectedIcon: Icons.person,
+              label: t('nav_profile'),
+              selected: _currentIndex == 3,
+              onTap: () => setState(() => _currentIndex = 3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomNavItem extends StatelessWidget {
+  const _BottomNavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = selected ? cs.primary : cs.onSurfaceVariant;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(selected ? selectedIcon : icon, color: color, size: 22),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.kitchen_outlined),
-            selectedIcon: const Icon(Icons.kitchen),
-            label: t('nav_inventory'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.restaurant_menu_outlined),
-            selectedIcon: const Icon(Icons.restaurant_menu),
-            label: t('nav_recipes'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: t('nav_profile'),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -1,9 +1,11 @@
+import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/app_provider.dart';
+import '../theme/app_theme.dart';
 
 /// Sign-in / sign-up UI provided by Clerk (email, OAuth per Clerk Dashboard).
 ///
@@ -22,121 +24,129 @@ class AuthScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final testEmail = dotenv.env['TEST_ACCOUNT_EMAIL']?.trim() ?? '';
     final testPassword = dotenv.env['TEST_ACCOUNT_PASSWORD'] ?? '';
-    final showTestHint =
-        testEmail.isNotEmpty && testPassword.trim().isNotEmpty;
+    final showTestHint = testEmail.isNotEmpty && testPassword.trim().isNotEmpty;
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 24),
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.eco_rounded, size: 44, color: cs.primary),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Harvest & Hearth',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: cs.primary,
-                    ),
-              ),
-              Text(
-                t('auth_tagline'),
-                textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(height: 24),
-              const ClerkAuthentication(),
-              if (showTestHint) ...[
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () => _showTestAccountSheet(
-                    context,
-                    testEmail,
-                    testPassword.trim(),
-                  ),
-                  icon: const Icon(Icons.person_outline_rounded),
-                  label: Text(t('auth_test_account')),
-                ),
-              ],
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              cs.surface,
+              cs.surfaceContainerHighest.withValues(alpha: 0.55),
             ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: BorderRadius.circular(AppRadii.xl),
+                    border: Border.all(color: cs.outlineVariant, width: 1.35),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 84,
+                        height: 84,
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: cs.secondary.withValues(alpha: 0.7),
+                            width: 1.4,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.eco_rounded,
+                          size: 44,
+                          color: cs.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Harvest & Hearth',
+                        textAlign: TextAlign.center,
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: cs.primary,
+                                ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        t('auth_tagline'),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: BorderRadius.circular(AppRadii.xl),
+                    border: Border.all(color: cs.outline, width: 1.3),
+                  ),
+                  child: const ClerkAuthentication(),
+                ),
+                if (showTestHint) ...[
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    onPressed: () => _signInWithTestAccount(
+                      context,
+                      testEmail,
+                      testPassword.trim(),
+                    ),
+                    icon: const Icon(Icons.login_rounded),
+                    label: Text('${t('auth_test_account')} (1 chạm)'),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  static void _showTestAccountSheet(
+  static Future<void> _signInWithTestAccount(
     BuildContext context,
     String email,
     String password,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Tài khoản thử',
-                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Đăng nhập hoặc đăng ký thủ công trên form phía trên bằng thông tin dưới đây (user phải tồn tại trong Clerk).',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              SelectableText(
-                'Email:\n$email\n\nMật khẩu:\n$password',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(
-                    ClipboardData(text: '$email\n$password'),
-                  );
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã sao chép email và mật khẩu'),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.copy_rounded),
-                label: const Text('Sao chép email + mật khẩu'),
-              ),
-            ],
-          ),
-        );
-      },
+  ) async {
+    final authState = ClerkAuth.of(context, listen: false);
+    await authState.safelyCall(
+      context,
+      () => authState.attemptSignIn(
+        strategy: clerk.Strategy.password,
+        identifier: email,
+        password: password,
+      ),
+    );
+
+    if (!context.mounted) return;
+    if (authState.isSignedIn) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Tài khoản thử chưa vào thẳng được. Vui lòng hoàn tất bước xác thực còn lại trên form Clerk.',
+        ),
+      ),
     );
   }
 }

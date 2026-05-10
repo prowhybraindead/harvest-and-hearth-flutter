@@ -45,6 +45,17 @@ class RecipeSearchService {
   static const _dummyJsonBase = 'https://dummyjson.com';
   static const _ddgBase = 'https://api.duckduckgo.com/';
   static const _timeout = Duration(seconds: 15);
+  static const _trustedMealDomains = <String>[
+    'allrecipes.com',
+    'foodnetwork.com',
+    'eatingwell.com',
+    'bbcgoodfood.com',
+    'seriouseats.com',
+    'skinnytaste.com',
+    'delish.com',
+    'tasteofhome.com',
+    'healthline.com',
+  ];
 
   // ── TheMealDB ─────────────────────────────────────────────────────────────
 
@@ -137,6 +148,18 @@ class RecipeSearchService {
     return results;
   }
 
+  /// Full-text search on DummyJSON recipes endpoint.
+  Future<List<Recipe>> searchDummyJson(String query) async {
+    final uri = Uri.parse(
+      '$_dummyJsonBase/recipes/search?q=${Uri.encodeComponent(query)}',
+    );
+    final res = await http.get(uri).timeout(_timeout);
+    if (res.statusCode != 200) return const [];
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    final rows = data['recipes'] as List? ?? const [];
+    return rows.map((r) => _dummyRowToRecipe(r as Map<String, dynamic>)).toList();
+  }
+
   /// Fetch full meal details by TheMealDB id.
   Future<Recipe?> getMealById(String mealId) async {
     if (mealId.startsWith('dj_')) {
@@ -157,19 +180,24 @@ class RecipeSearchService {
     if (res.statusCode != 200) return null;
     final row = jsonDecode(res.body) as Map<String, dynamic>;
 
-    final ingredients = List<String>.from(row['ingredients'] as List? ?? const []);
-    final instructions = List<String>.from(row['instructions'] as List? ?? const []);
+    return _dummyRowToRecipe(row);
+  }
+
+  Recipe _dummyRowToRecipe(Map<String, dynamic> row) {
+    final ingredients =
+        List<String>.from(row['ingredients'] as List? ?? const []);
+    final instructions =
+        List<String>.from(row['instructions'] as List? ?? const []);
     final prep = (row['prepTimeMinutes'] as num?)?.toInt() ?? 10;
     final cook = (row['cookTimeMinutes'] as num?)?.toInt() ?? 20;
     final servings = (row['servings'] as num?)?.toInt() ?? 2;
     final calories = (row['caloriesPerServing'] as num?)?.toInt() ?? 0;
-
     final cuisine = (row['cuisine'] as String? ?? '').trim();
-    final desc = cuisine.isEmpty ? 'Vietnamese' : cuisine;
-
+    final desc = cuisine.isEmpty ? 'Recipe' : cuisine;
+    final rawId = row['id']?.toString() ?? '0';
     return Recipe(
-      id: 'dummy_$id',
-      name: (row['name'] as String? ?? 'Vietnamese Recipe').trim(),
+      id: 'dummy_$rawId',
+      name: (row['name'] as String? ?? 'Recipe').trim(),
       description: desc,
       difficulty: RecipeDifficulty.medium,
       prepTime: prep,
@@ -179,7 +207,7 @@ class RecipeSearchService {
       ingredientsNeeded: ingredients,
       instructions: instructions,
       sourceName: 'DummyJSON',
-      sourceUrl: 'https://dummyjson.com/recipes/$id',
+      sourceUrl: 'https://dummyjson.com/recipes/$rawId',
       imageKeyword: (row['image'] as String? ?? '').trim(),
     );
   }
@@ -287,5 +315,17 @@ class RecipeSearchService {
     } catch (_) {
       return [];
     }
+  }
+
+  /// DuckDuckGo results filtered to trusted meal-planning domains only.
+  Future<List<DdgResult>> searchTrustedMealPlanningWeb(String query) async {
+    final raw = await searchDuckDuckGo('$query meal plan');
+    final filtered = raw.where((r) {
+      final host = Uri.tryParse(r.url)?.host.toLowerCase() ?? '';
+      return _trustedMealDomains.any(
+        (d) => host == d || host.endsWith('.$d'),
+      );
+    }).toList(growable: false);
+    return filtered.take(5).toList(growable: false);
   }
 }

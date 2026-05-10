@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../models/chat_message.dart';
 import '../providers/app_provider.dart';
+import 'shopping_planner_screen.dart';
+import '../theme/app_theme.dart';
 
-/// Full-screen AI chat conversation with the AI Chef.
+/// Full-screen AI chat conversation with the assistant.
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key, this.initialPrompt});
 
@@ -74,6 +76,28 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
   }
 
+  Future<void> _pushMealPlanToShopping(String content) async {
+    final provider = context.read<AppProvider>();
+    final added = await provider.importShoppingPlanFromChat(content);
+    if (!mounted) return;
+    final t = provider.t;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          added > 0
+              ? t('chat_to_plan_success').replaceAll('{count}', '$added')
+              : t('chat_to_plan_empty'),
+        ),
+      ),
+    );
+    if (added > 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ShoppingPlannerScreen()),
+      );
+    }
+  }
+
   void _confirmClearChat() {
     final t = context.read<AppProvider>().t;
     showDialog(
@@ -118,7 +142,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 color: cs.primaryContainer,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.smart_toy_rounded, color: cs.primary, size: 20),
+              child: _HearthieLogo(
+                size: 20,
+                tint: cs.primary,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -130,6 +157,26 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.hearthieSky.withAlpha(34),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: AppColors.hearthieGold.withAlpha(150),
+                      ),
+                    ),
+                    child: Text(
+                      'Preview',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.hearthieNight,
+                      ),
                     ),
                   ),
                   if (provider.isAiTyping)
@@ -171,6 +218,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     scrollController: _scrollController,
                     t: t,
                     cs: cs,
+                    onPushToShopping: _pushMealPlanToShopping,
                   ),
           ),
 
@@ -190,6 +238,20 @@ class _AiChatScreenState extends State<AiChatScreen> {
               cs: cs,
               canRetry: provider.canRetryLastChat,
               onRetry: _retryLastMessage,
+            ),
+
+          if (provider.canRegenerate && !provider.isAiTyping)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () =>
+                      context.read<AppProvider>().regenerateLastChatResponse(),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Regenerate'),
+                ),
+              ),
             ),
 
           // Input area
@@ -224,10 +286,11 @@ class _InventoryContextPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withAlpha(128),
-        borderRadius: BorderRadius.circular(20),
+        color: cs.surfaceContainerHighest.withAlpha(100),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withAlpha(105)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -307,6 +370,7 @@ class _ChatMessagesList extends StatelessWidget {
   final ScrollController scrollController;
   final String Function(String) t;
   final ColorScheme cs;
+  final Future<void> Function(String content) onPushToShopping;
 
   const _ChatMessagesList({
     required this.messages,
@@ -314,21 +378,34 @@ class _ChatMessagesList extends StatelessWidget {
     required this.scrollController,
     required this.t,
     required this.cs,
+    required this.onPushToShopping,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      itemCount: messages.length + (isAiTyping ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == messages.length && isAiTyping) {
-          return _TypingIndicator(cs: cs);
-        }
-        final msg = messages[index];
-        return _ChatBubble(message: msg, cs: cs);
-      },
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withAlpha(85)),
+      ),
+      child: ListView.builder(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+        itemCount: messages.length + (isAiTyping ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == messages.length && isAiTyping) {
+            return _TypingIndicator(cs: cs);
+          }
+          final msg = messages[index];
+          return _ChatBubble(
+            message: msg,
+            cs: cs,
+            t: t,
+            onPushToShopping: onPushToShopping,
+          );
+        },
+      ),
     );
   }
 }
@@ -338,8 +415,25 @@ class _ChatMessagesList extends StatelessWidget {
 class _ChatBubble extends StatelessWidget {
   final ChatMessage message;
   final ColorScheme cs;
+  final String Function(String) t;
+  final Future<void> Function(String content) onPushToShopping;
 
-  const _ChatBubble({required this.message, required this.cs});
+  const _ChatBubble({
+    required this.message,
+    required this.cs,
+    required this.t,
+    required this.onPushToShopping,
+  });
+
+  bool get _canPushToShopping {
+    if (message.role != ChatRole.assistant) return false;
+    final m = message.content.toLowerCase();
+    return (m.contains('thực đơn') ||
+            m.contains('meal plan') ||
+            m.contains('shopping') ||
+            m.contains('cần mua')) &&
+        (m.contains('-') || m.contains('•'));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -358,7 +452,7 @@ class _ChatBubble extends StatelessWidget {
             CircleAvatar(
               radius: 14,
               backgroundColor: cs.primaryContainer,
-              child: Icon(Icons.smart_toy_rounded, size: 16, color: cs.primary),
+              child: _HearthieLogo(size: 16, tint: cs.primary),
             ),
             const SizedBox(width: 8),
           ],
@@ -375,6 +469,11 @@ class _ChatBubble extends StatelessWidget {
                   topRight: const Radius.circular(16),
                   bottomLeft: Radius.circular(isUser ? 16 : 4),
                   bottomRight: Radius.circular(isUser ? 4 : 16),
+                ),
+                border: Border.all(
+                  color: isUser
+                      ? cs.secondary.withAlpha(105)
+                      : cs.outlineVariant.withAlpha(120),
                 ),
               ),
               child: Column(
@@ -398,6 +497,23 @@ class _ChatBubble extends StatelessWidget {
                           : cs.onSurfaceVariant,
                     ),
                   ),
+                  if (_canPushToShopping) ...[
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => onPushToShopping(message.content),
+                        icon: const Icon(
+                          Icons.playlist_add_check_circle_rounded,
+                          size: 16,
+                        ),
+                        label: Text(
+                          t('chat_to_plan'),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -450,16 +566,16 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           CircleAvatar(
             radius: 14,
             backgroundColor: widget.cs.primaryContainer,
-            child: Icon(Icons.smart_toy_rounded,
-                size: 16, color: widget.cs.primary),
+            child: _HearthieLogo(size: 16, tint: widget.cs.primary),
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: widget.cs.surfaceContainerHighest,
               borderRadius: const BorderRadius.only(
@@ -469,34 +585,83 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 bottomRight: Radius.circular(16),
               ),
             ),
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(3, (i) {
-                    final progress = (_controller.value * 3 - i) % 1.0;
-                    final scale = 0.5 + 0.5 * (1 - (2 * progress - 1).abs());
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Transform.scale(
-                        scale: scale,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: widget.cs.onSurfaceVariant,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
+            child: SizedBox(
+              width: 120,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(3, (i) {
+                          final progress = (_controller.value * 3 - i) % 1.0;
+                          final scale =
+                              0.5 + 0.5 * (1 - (2 * progress - 1).abs());
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Transform.scale(
+                              scale: scale,
+                              child: Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: widget.cs.onSurfaceVariant,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ...List.generate(
+                    2,
+                    (i) => Container(
+                      margin: EdgeInsets.only(bottom: i == 0 ? 6 : 0),
+                      height: 8,
+                      width: i == 0 ? 92 : 70,
+                      decoration: BoxDecoration(
+                        color: widget.cs.onSurfaceVariant.withAlpha(45),
+                        borderRadius: BorderRadius.circular(99),
                       ),
-                    );
-                  }),
-                );
-              },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HearthieLogo extends StatelessWidget {
+  const _HearthieLogo({
+    required this.size,
+    required this.tint,
+  });
+
+  final double size;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColorFiltered(
+      colorFilter: ColorFilter.mode(
+        tint.withAlpha(235),
+        BlendMode.srcATop,
+      ),
+      child: Image.asset(
+        'public/hearthie/hearthie.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
       ),
     );
   }
@@ -586,7 +751,8 @@ class _ErrorBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: cs.errorContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.error.withAlpha(120)),
       ),
       child: Row(
         children: [
@@ -639,6 +805,9 @@ class _ChatInputBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       decoration: BoxDecoration(
         color: cs.surface,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withAlpha(105)),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(13),
@@ -666,14 +835,14 @@ class _ChatInputBar extends StatelessWidget {
                     hintText: t('chat_placeholder'),
                     hintStyle: TextStyle(color: cs.onSurfaceVariant),
                     filled: true,
-                    fillColor: cs.surfaceContainerLow,
+                    fillColor: cs.surfaceContainerHighest.withAlpha(90),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(color: cs.outlineVariant),
                     ),
                   ),
                 ),

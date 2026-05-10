@@ -8,7 +8,7 @@ import '../models/recipe.dart';
 
 const _uuid = Uuid();
 const _groqEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
-const _model = 'llama-3.3-70b-versatile';
+const _defaultRecipeModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 class GroqService {
   GroqService._();
@@ -16,6 +16,10 @@ class GroqService {
   static GroqService get instance => _instance ??= GroqService._();
 
   String get _apiKey => dotenv.maybeGet('GROQ_API_KEY') ?? '';
+  String get _model =>
+      dotenv.maybeGet('GROQ_RECIPE_MODEL')?.trim().isNotEmpty == true
+          ? dotenv.maybeGet('GROQ_RECIPE_MODEL')!.trim()
+          : _defaultRecipeModel;
 
   Future<List<Recipe>> generateRecipes(
     List<FoodItem> inventory,
@@ -51,7 +55,7 @@ Trả về CHÍNH XÁC JSON sau (không có text khác, không có markdown):
       "calories": 350,
       "ingredientsNeeded": ["100g thịt bò", "2 củ cà rốt"],
       "instructions": ["Bước 1: ...", "Bước 2: ..."],
-      "sourceName": "AI Chef",
+      "sourceName": "Hearthie",
       "sourceUrl": "",
       "imageKeyword": "vietnamese beef stir fry"
     }
@@ -76,7 +80,7 @@ Return EXACTLY this JSON (no other text, no markdown):
       "calories": 350,
       "ingredientsNeeded": ["100g beef", "2 carrots"],
       "instructions": ["Step 1: ...", "Step 2: ..."],
-      "sourceName": "AI Chef",
+      "sourceName": "Hearthie",
       "sourceUrl": "",
       "imageKeyword": "beef stir fry"
     }
@@ -100,7 +104,8 @@ Return EXACTLY this JSON (no other text, no markdown):
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Groq API error ${response.statusCode}: ${response.body}');
+      throw Exception(
+          'Groq API error ${response.statusCode}: ${response.body}');
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;

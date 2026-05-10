@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../core/simulated_clock.dart';
 import '../providers/app_provider.dart';
 import '../services/expiry_reminder_service.dart';
+import '../theme/app_theme.dart';
 
 /// Debug: always on. Release: on unless `.env` sets `ENABLE_TIME_SIMULATOR` to `false`, `0`, or `no`.
 bool isTimeSimulatorFabVisible() {
@@ -21,10 +22,13 @@ class TimeSimulatorFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.read<AppProvider>().t;
+    final cs = Theme.of(context).colorScheme;
     return FloatingActionButton.small(
       heroTag: 'time_simulator_fab',
       tooltip: t('time_simulator_tooltip'),
       onPressed: () => _openConsole(context),
+      backgroundColor: cs.primary,
+      foregroundColor: cs.onPrimary,
       child: const Icon(Icons.more_time_rounded),
     );
   }
@@ -37,7 +41,7 @@ class TimeSimulatorFab extends StatelessWidget {
       builder: (ctx) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
             child: Consumer<AppProvider>(
               builder: (context, p, _) {
                 final t = p.t;
@@ -49,46 +53,73 @@ class TimeSimulatorFab extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      t('time_simulator_title'),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: cs.surface,
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        border: Border.all(color: cs.outlineVariant),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t('time_simulator_title'),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                           ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      SimulatedClock.describeOffset(p.language),
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _DayChip(
-                          label: t('time_simulator_p1'),
-                          onPressed: () {
-                            SimulatedClock.addDays(1);
-                            p.applySimulatedTime();
-                          },
-                        ),
-                        _DayChip(
-                          label: t('time_simulator_p3'),
-                          onPressed: () {
-                            SimulatedClock.addDays(3);
-                            p.applySimulatedTime();
-                          },
-                        ),
-                        _DayChip(
-                          label: t('time_simulator_p7'),
-                          onPressed: () {
-                            SimulatedClock.addDays(7);
-                            p.applySimulatedTime();
-                          },
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Text(
+                            SimulatedClock.describeOffset(p.language),
+                            style: TextStyle(
+                              color: cs.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cs.surface,
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        border: Border.all(color: cs.outline),
+                      ),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _DayChip(
+                            label: t('time_simulator_p1'),
+                            onPressed: () {
+                              SimulatedClock.addDays(1);
+                              p.applySimulatedTime();
+                            },
+                          ),
+                          _DayChip(
+                            label: t('time_simulator_p3'),
+                            onPressed: () {
+                              SimulatedClock.addDays(3);
+                              p.applySimulatedTime();
+                            },
+                          ),
+                          _DayChip(
+                            label: t('time_simulator_p7'),
+                            onPressed: () {
+                              SimulatedClock.addDays(7);
+                              p.applySimulatedTime();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: () {
                         SimulatedClock.reset();
@@ -100,29 +131,32 @@ class TimeSimulatorFab extends StatelessWidget {
                     const SizedBox(height: 8),
                     FilledButton.tonalIcon(
                       onPressed: () async {
-                        final ok =
-                            await ExpiryReminderService.instance
-                                .showImmediateTestSummary(
+                        final status = await ExpiryReminderService.instance
+                            .showImmediateTestSummary(
                           expiring: expiring,
                           expired: expired,
                           language: p.language,
-                                userId: p.user?.id,
+                          userId: p.user?.id,
                         );
                         if (!context.mounted) return;
+                        final message = switch (status) {
+                          TestNotificationStatus.sent =>
+                            t('time_simulator_test_sent'),
+                          TestNotificationStatus.permissionDenied =>
+                            t('time_simulator_test_notif_denied'),
+                          TestNotificationStatus.failed =>
+                            t('time_simulator_test_notif_failed'),
+                        };
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(
-                              ok
-                                  ? t('time_simulator_test_sent')
-                                  : t('time_simulator_test_notif_denied'),
-                            ),
+                            content: Text(message),
                           ),
                         );
                       },
                       icon: const Icon(Icons.notifications_active_outlined),
                       label: Text(t('time_simulator_test_notif')),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Text(
                       t('time_simulator_hint'),
                       style: TextStyle(
@@ -149,9 +183,17 @@ class _DayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ActionChip(
-      label: Text(label),
       onPressed: onPressed,
+      side: BorderSide(color: cs.outlineVariant),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      label: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

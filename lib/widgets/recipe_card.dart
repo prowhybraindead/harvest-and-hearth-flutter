@@ -22,7 +22,12 @@ class RecipeCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: cs.outlineVariant.withAlpha(105)),
+      ),
       child: InkWell(
+        borderRadius: BorderRadius.circular(20),
         onTap: () => _showDetail(context),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -76,8 +81,19 @@ class RecipeCard extends StatelessWidget {
                   ),
                   IconButton(
                     icon: Icon(
-                      isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                      isSaved
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_outline_rounded,
                       color: isSaved ? cs.primary : cs.onSurfaceVariant,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor:
+                          (isSaved ? cs.primary : cs.outlineVariant)
+                              .withAlpha(18),
+                      side: BorderSide(
+                        color: (isSaved ? cs.primary : cs.outlineVariant)
+                            .withAlpha(90),
+                      ),
                     ),
                     onPressed: () {
                       if (isSaved) {
@@ -96,7 +112,8 @@ class RecipeCard extends StatelessWidget {
                 children: [
                   _MetaChip(
                     icon: Icons.timer_outlined,
-                    label: '${recipe.prepTime + recipe.cookTime} ${t('recipes_mins')}',
+                    label:
+                        '${recipe.prepTime + recipe.cookTime} ${t('recipes_mins')}',
                   ),
                   _MetaChip(
                     icon: Icons.people_outline_rounded,
@@ -106,8 +123,7 @@ class RecipeCard extends StatelessWidget {
                     icon: Icons.local_fire_department_outlined,
                     label: '${recipe.calories} ${t('recipes_kcal')}',
                   ),
-                  _DifficultyChip(
-                      difficulty: recipe.difficulty, t: provider.t),
+                  _DifficultyChip(difficulty: recipe.difficulty, t: provider.t),
                 ],
               ),
             ],
@@ -160,7 +176,8 @@ class _MetaChip extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: cs.onSurfaceVariant),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+          Text(label,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
         ],
       ),
     );
@@ -226,8 +243,8 @@ class _DifficultyChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-            fontSize: 11, color: color, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -259,7 +276,8 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
   @override
   void initState() {
     super.initState();
-    if (widget.provider.language == 'VIE' && _looksEnglishRecipe(widget.recipe)) {
+    if (widget.provider.language == 'VIE' &&
+        _looksEnglishRecipe(widget.recipe)) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _translateAll());
     }
   }
@@ -319,12 +337,16 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
     final displayDesc = (_showingTranslated && _translatedDesc != null)
         ? _translatedDesc!
         : recipe.description;
-    final displayIngredients = (_showingTranslated && _translatedIngredients != null)
-        ? _translatedIngredients!
-        : recipe.ingredientsNeeded;
-    final displayInstructions = (_showingTranslated && _translatedInstructions != null)
-        ? _translatedInstructions!
-        : recipe.instructions;
+    final displayIngredients =
+        (_showingTranslated && _translatedIngredients != null)
+            ? _translatedIngredients!
+            : recipe.ingredientsNeeded;
+    final displayInstructions =
+        (_showingTranslated && _translatedInstructions != null)
+            ? _translatedInstructions!
+            : recipe.instructions;
+    final normalizedInstructions =
+        normalizeRecipeInstructions(displayInstructions);
 
     return ListView(
       controller: widget.controller,
@@ -421,11 +443,11 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.fiber_manual_record,
-                      size: 8,
-                      color: cs.primary),
+                  Icon(Icons.fiber_manual_record, size: 8, color: cs.primary),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(ingredient, style: const TextStyle(fontSize: 14))),
+                  Expanded(
+                      child: Text(ingredient,
+                          style: const TextStyle(fontSize: 14))),
                 ],
               ),
             )),
@@ -438,7 +460,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                 .titleMedium
                 ?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...displayInstructions.asMap().entries.map((entry) {
+        ...normalizedInstructions.asMap().entries.map((entry) {
           final i = entry.key;
           final step = entry.value;
           return Padding(
@@ -482,8 +504,9 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
             }
             Navigator.pop(context);
           },
-          icon: Icon(
-              isSaved ? Icons.bookmark_remove_rounded : Icons.bookmark_add_rounded),
+          icon: Icon(isSaved
+              ? Icons.bookmark_remove_rounded
+              : Icons.bookmark_add_rounded),
           label: Text(isSaved ? t('recipes_unsave') : t('recipes_save')),
         ),
       ],
@@ -512,8 +535,7 @@ class _DetailStat extends StatelessWidget {
         Icon(icon, color: cs.primary, size: 22),
         const SizedBox(height: 4),
         Text(value,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 18)),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         Text('$label ($unit)',
             style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
             textAlign: TextAlign.center),
